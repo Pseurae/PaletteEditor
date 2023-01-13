@@ -62,7 +62,8 @@ public:
     void DetailsBar(void);
     void PaletteEditor(void);
 
-    void OpenPalette(void);
+    void OpenPalette(const char *);
+    void PromptOpenPalette(void);
     void SavePalette(bool);
 
     void ResizePalette(int size);

@@ -13,35 +13,6 @@
 #include <algorithm>
 #include <fstream>
 
-#if defined(__APPLE__)
-asm(
-    ".const_data\n"
-    ".globl _sFont_ProggyClean\n"
-    ".align 4\n"
-    "_sFont_ProggyClean:\n"
-    "   .incbin \"ProggyClean.ttf\"\n"
-    ".globl _sFont_ProggyCleanLen\n"
-    ".align 4\n"
-    "_sFont_ProggyCleanLen:\n"
-    "   .long . - _sFont_ProggyClean\n"
-);
-#else
-asm(
-    ".section .rodata\n"
-    ".global sFont_ProggyClean\n"
-    ".align 4\n"
-    "sFont_ProggyClean:\n"
-    "   .incbin \"ProggyClean.ttf\"\n"
-    ".global sFont_ProggyCleanLen\n"
-    ".align 4\n"
-    "sFont_ProggyCleanLen:\n"
-    "   .long sFont_ProggyCleanLen - sFont_ProggyClean"
-);
-#endif
-
-extern const unsigned char sFont_ProggyClean[];
-extern const unsigned long sFont_ProggyCleanLen;
-
 void Popup::Popups(void)
 {
     ImGuiWindowFlags popupflags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse;
@@ -51,14 +22,14 @@ void Popup::Popups(void)
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if (ImGui::BeginPopupModal("Prompt", NULL, popupflags))
     {
-        ImGui::Text("%s", this->m_PopupMessage.c_str());
+        ImGui::Text("%s", m_PopupMessage.c_str());
 
         ImGui::Spacing();
 
         if (ImGui::Button("Yes"))
         {
-            if (this->m_YesAction != nullptr)
-                this->m_YesAction();
+            if (m_YesAction != nullptr)
+                m_YesAction();
             ImGui::CloseCurrentPopup();
         }
 
@@ -68,8 +39,8 @@ void Popup::Popups(void)
 
         if (ImGui::Button("No", button_size))
         {
-            if (this->m_NoAction != nullptr)
-                this->m_NoAction();
+            if (m_NoAction != nullptr)
+                m_NoAction();
             ImGui::CloseCurrentPopup();
         }
 
@@ -79,12 +50,12 @@ void Popup::Popups(void)
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if (ImGui::BeginPopupModal("Error", NULL, popupflags))
     {
-        ImGui::Text("%s", this->m_PopupMessage.c_str());
+        ImGui::Text("%s", m_PopupMessage.c_str());
 
         if (ImGui::Button("Ok"))
         {
-            if (this->m_YesAction != nullptr)
-                this->m_YesAction();
+            if (m_YesAction != nullptr)
+                m_YesAction();
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -109,19 +80,17 @@ void Popup::Popups(void)
 
 void Popup::ShowPrompt(std::string msg, Popup::Action yes_action, Popup::Action no_action)
 {
-    this->m_PopupMessage = msg;
-    this->m_YesAction = yes_action;
-    this->m_NoAction = no_action;
-
-    this->m_Mode = PopupMode::Prompt;
+    m_PopupMessage = msg;
+    m_YesAction = yes_action;
+    m_NoAction = no_action;
+    m_Mode = PopupMode::Prompt;
 }
 
 void Popup::ShowError(std::string msg, Popup::Action ok_action)
 {
-    this->m_PopupMessage = msg;
-    this->m_YesAction = ok_action;
-
-    this->m_Mode = PopupMode::Error;
+    m_PopupMessage = msg;
+    m_YesAction = ok_action;
+    m_Mode = PopupMode::Error;
 }
 
 static void glfw_error_callback(int error, const char *description)
@@ -167,8 +136,8 @@ void Editor::InitGLFW()
     if (m_Window == NULL)
         std::abort();
 
-    glfwSetWindowUserPointer(this->m_Window, this);
-    glfwSetWindowSizeLimits(this->m_Window, 400, 400, 400, 400);
+    glfwSetWindowUserPointer(m_Window, this);
+    glfwSetWindowSizeLimits(m_Window, 400, 400, 400, 400);
 
     glfwMakeContextCurrent(m_Window);
     glfwSwapInterval(1);
@@ -190,6 +159,18 @@ void Editor::InitGLFW()
         }
     });
 
+    glfwSetDropCallback(m_Window, [](GLFWwindow *window, int path_count, const char *paths[]) {
+        Editor *editor = static_cast<Editor *>(glfwGetWindowUserPointer(window));
+
+        if (path_count <= 0)
+            return;
+
+        std::string path = std::string(paths[0], strlen(paths[0]));
+        if (path.substr(path.find_last_of(".") + 1) != "pal")
+            return;
+        editor->OpenPalette(path.c_str());
+    });
+
     m_DPIScaling = std::max((float)fb_w / win_w, (float)fb_h / win_h);
 }
 
@@ -201,8 +182,8 @@ void Editor::InitImGui(void)
 
     ImFontConfig font_cfg;
     font_cfg.FontDataOwnedByAtlas = false;
-    io.Fonts->AddFontFromMemoryTTF((void *)sFont_ProggyClean, sFont_ProggyCleanLen, 13.0f * m_DPIScaling, &font_cfg);
-    io.FontGlobalScale /= m_DPIScaling;
+    // io.Fonts->AddFontFromMemoryTTF((void *)sFont_ProggyClean, sFont_ProggyCleanLen, 13.0f * m_DPIScaling, &font_cfg);
+    // io.FontGlobalScale /= m_DPIScaling;
 
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(m_Window, true);
@@ -228,7 +209,7 @@ void Editor::StartFrame(void)
     ImGui::SetNextWindowSize(viewport->Size);
 
     ImGui::Begin("PalEditor", NULL, windowflags);
-    this->m_PopupCtrl.Popups();
+    m_PopupCtrl.Popups();
     this->MenuBar();
     ImGui::End();
 }
@@ -257,11 +238,11 @@ void Editor::EndFrame(void)
 
 void Editor::Loop(void)
 {
-    while (!glfwWindowShouldClose(this->m_Window))
+    while (!glfwWindowShouldClose(m_Window))
     {
-        if (glfwGetWindowAttrib(this->m_Window, GLFW_ICONIFIED) || 
-            !glfwGetWindowAttrib(this->m_Window, GLFW_FOCUSED) ||
-            !glfwGetWindowAttrib(this->m_Window, GLFW_VISIBLE))
+        if (glfwGetWindowAttrib(m_Window, GLFW_ICONIFIED) || 
+            !glfwGetWindowAttrib(m_Window, GLFW_FOCUSED) ||
+            !glfwGetWindowAttrib(m_Window, GLFW_VISIBLE))
         {
             glfwWaitEvents();
         }
@@ -284,7 +265,7 @@ void Editor::ExitImGui(void)
 
 void Editor::ExitGLFW(void)
 {
-    glfwDestroyWindow(this->m_Window);
+    glfwDestroyWindow(m_Window);
     glfwTerminate();
 }
 
@@ -312,29 +293,15 @@ void Editor::MenuBar(void)
         {
             if (ImGui::MenuItem("Open", sText_FileShortcuts[0])) 
             {
-                if (this->m_Dirty)
-                {
-                    m_PopupCtrl.ShowPrompt(
-                        "Opening another palette will discard unsaved changes.\nDo you want to continue?",
-                        [this](void)
-                        {
-                            this->OpenPalette();
-                        },
-                        []() {}
-                    );
-                }
-                else
-                {
-                    OpenPalette();
-                }
+                this->PromptOpenPalette();
             }
             if (ImGui::MenuItem("Save", sText_FileShortcuts[1])) 
             {
-                SavePalette(false);
+                this->SavePalette(false);
             }
             if (ImGui::MenuItem("Save As", sText_FileShortcuts[2]))
             {
-                SavePalette(true);
+                this->SavePalette(true);
             }
             ImGui::EndMenu();
         }
@@ -407,11 +374,8 @@ void Editor::PaletteEditor(void)
 
 static constexpr const char *sFilterPatterns[] = { "*.pal" };
 
-void Editor::OpenPalette(void)
+void Editor::OpenPalette(const char *path)
 {
-    char *path = tinyfd_openFileDialog("Open Palette File", NULL, 1, sFilterPatterns, "Palette Files (*.pal)", 0);
-    if (!path)
-        return;
 
     std::string new_file = std::string(path, strlen(path));
     std::ifstream palfile(new_file, std::ios::in);
@@ -436,6 +400,31 @@ void Editor::OpenPalette(void)
 
     m_LoadedFile = new_file;
     m_Dirty = false;
+}
+
+void Editor::PromptOpenPalette(void)
+{
+    if (this->m_Dirty)
+    {
+        m_PopupCtrl.ShowPrompt(
+            "Opening another palette will discard unsaved changes.\nDo you want to continue?",
+            [this](void)
+            {
+                char *path = tinyfd_openFileDialog("Open Palette File", NULL, 1, sFilterPatterns, "Palette Files (*.pal)", 0);
+                if (!path)
+                    return;
+                this->OpenPalette(path);
+            },
+            nullptr
+        );
+    }
+    else
+    {
+        char *path = tinyfd_openFileDialog("Open Palette File", NULL, 1, sFilterPatterns, "Palette Files (*.pal)", 0);
+        if (!path)
+            return;
+        this->OpenPalette(path);
+    }
 }
 
 void Editor::SavePalette(bool promptFilepath)
@@ -538,19 +527,13 @@ void Editor::ProcessShortcuts(int key, int mods)
         switch (key)
         {
         case GLFW_KEY_O:
-            if (this->m_Dirty)
-                m_PopupCtrl.ShowPrompt(
-                    "Opening another palette will discard unsaved changes.\nDo you want to continue?",
-                    [this](void) { this->OpenPalette(); }, nullptr
-                );
-            else
-                OpenPalette();
+            this->PromptOpenPalette();
             break;
         case GLFW_KEY_S:
             if (mods & GLFW_MOD_SHIFT)
-                SavePalette(true);
+                this->SavePalette(true);
             else
-                SavePalette(false);
+                this->SavePalette(false);
             break;
         case GLFW_KEY_Z:
             this->Undo();
