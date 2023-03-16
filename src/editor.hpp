@@ -39,8 +39,8 @@ private:
     std::string m_LoadedFile;
     bool m_Dirty = false;
 
-    std::list<Actions::EditActionBase *> m_RedoStack;
-    std::list<Actions::EditActionBase *> m_UndoStack;
+    std::list<std::shared_ptr<Actions::EditActionBase>> m_RedoStack;
+    std::list<std::shared_ptr<Actions::EditActionBase>> m_UndoStack;
 
 public:
     Editor();
@@ -114,6 +114,14 @@ struct ModifyColor : EditActionBase
 
     ModifyColor(int idx, float *old_color, float *new_color);
 
+    void redo(Editor *) override;
+    void undo(Editor *) override;
+};
+
+struct SwapColors : EditActionBase
+{
+    int old_idx, new_idx;
+    SwapColors(int old_idx, int new_idx) : old_idx(old_idx), new_idx(new_idx) {}
     void redo(Editor *) override;
     void undo(Editor *) override;
 };

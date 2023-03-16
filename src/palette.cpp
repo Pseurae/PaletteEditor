@@ -79,7 +79,7 @@ void Palette::SaveToFile(std::ofstream &stream)
     }
 }
 
-ColorList *Palette::GetColorList(void)
+ColorList &Palette::GetColorList(void)
 {
-    return &m_Colors;
+    return m_Colors;
 }

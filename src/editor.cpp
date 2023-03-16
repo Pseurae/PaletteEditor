@@ -335,8 +335,15 @@ void Editor::DetailsBar(void)
     if (ImGui::IsItemDeactivatedAfterEdit())
         this->ResizePalette(num_colors);
 
-    ImGui::TextWrapped("Path: %s", m_LoadedFile.empty() ? "No file opened." : m_LoadedFile.c_str());
+    ImGui::TextWrapped("Path:\n%s", m_LoadedFile.empty() ? "No file opened." : m_LoadedFile.c_str());
     // ImGui::EndChild();
+}
+
+static void SwapColors(Color &c1, Color &c2)
+{
+    Color tmp = c2;
+    c2 = c1;
+    c1 = tmp;
 }
 
 void Editor::PaletteEditor(void)
@@ -344,28 +351,52 @@ void Editor::PaletteEditor(void)
     static bool has_cached_color = false;
     static float cached_color[3] = { 0.0f };
 
-    ColorList *colorlist = m_Palette->GetColorList();
+    ColorList &colorlist = m_Palette->GetColorList();
 
     ImGui::BeginChild("Colors", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_AlwaysAutoResize);
-    for (int i = 0; i < colorlist->size(); i++)
+    for (int i = 0; i < colorlist.size(); i++)
     {
         char label[10];
         snprintf(label, 10, "Color #%i", i);
 
-        ImGui::ColorEdit3(label, colorlist->at(i).data());
+        ImGui::ColorEdit3(label, colorlist.at(i).data(), ImGuiColorEditFlags_NoDragDrop);
 
         if (ImGui::IsItemActivated())
         {
             if (!has_cached_color)
-                memcpy(cached_color, colorlist->at(i).data(), sizeof(float) * 3);
+                memcpy(cached_color, colorlist.at(i).data(), sizeof(float) * 3);
             has_cached_color = true;
         }
 
         if (ImGui::IsItemDeactivatedAfterEdit())
         {
-            this->RegisterAction(new Actions::ModifyColor(i, cached_color, colorlist->at(i).data()));
+            this->RegisterAction(new Actions::ModifyColor(i, cached_color, colorlist.at(i).data()));
             m_Dirty = true;
             has_cached_color = false;
+        }
+
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+        {
+            ImGui::SetDragDropPayload("DND_DEMO_CELL", &i, sizeof(int));
+
+            const float *col = colorlist.at(i).data();
+            const ImVec4 col_v4(col[0], col[1], col[2], 1.0f);
+            ImGui::ColorButton("##preview", col_v4); ImGui::SameLine();
+            ImGui::Text("Color");
+            ImGui::EndDragDropSource();
+        }
+
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_CELL"))
+            {
+                IM_ASSERT(payload->DataSize == sizeof(int));
+                int target = *(const int*)payload->Data;
+                SwapColors(colorlist.at(i), colorlist.at(target));
+                m_Dirty = true;
+                this->RegisterAction(new Actions::SwapColors(i, target));
+            }
+            ImGui::EndDragDropTarget();
         }
     }
 
@@ -459,23 +490,20 @@ void Editor::SavePalette(bool promptFilepath)
 void Editor::ResizePalette(int size)
 {
     int old_size = m_Palette->GetPaletteSize();
-    this->RegisterAction(new Actions::ChangeColorCount(old_size, size, m_Palette->GetColorList()));
+    this->RegisterAction(new Actions::ChangeColorCount(old_size, size, &m_Palette->GetColorList()));
     m_Palette->ResizePalette(size);
     m_Dirty = true;
 }
 
 void Editor::RegisterAction(Actions::EditActionBase *action)
 {
-    m_UndoStack.push_front(action);
+    m_UndoStack.push_front(std::shared_ptr<Actions::EditActionBase>(action));
 
     if (m_UndoStack.empty())
         return;
 
     while (m_UndoStack.size() > 30)
-    {
-        delete m_UndoStack.back();
         m_UndoStack.pop_back();
-    }
 
     this->ClearRedoStack();
 }
@@ -485,10 +513,10 @@ void Editor::Undo(void)
     if (m_UndoStack.empty())
         return;
 
-    Actions::EditActionBase *action = m_UndoStack.front();
+    auto action = m_UndoStack.front();
     action->undo(this);
     m_UndoStack.pop_front();
-    m_RedoStack.push_front(action);
+    m_RedoStack.push_front(std::shared_ptr<Actions::EditActionBase>(action));
 }
 
 void Editor::Redo(void)
@@ -496,28 +524,20 @@ void Editor::Redo(void)
     if (m_RedoStack.empty())
         return;
 
-    Actions::EditActionBase *action = m_RedoStack.front();
+    auto action = m_RedoStack.front();
     action->redo(this);
     m_RedoStack.pop_front();
-    m_UndoStack.push_front(action);
+    m_UndoStack.push_front(std::shared_ptr<Actions::EditActionBase>(action));
 }
 
 void Editor::ClearUndoStack(void)
 {
-    while (m_UndoStack.size())
-    {
-        delete m_UndoStack.back();
-        m_UndoStack.pop_back();
-    }
+    m_UndoStack.clear();
 }
 
 void Editor::ClearRedoStack(void)
 {
-    while (m_RedoStack.size())
-    {
-        delete m_RedoStack.back();
-        m_RedoStack.pop_back();
-    }
+    m_RedoStack.clear();
 }
 
 void Editor::ProcessShortcuts(int key, int mods)
@@ -585,7 +605,7 @@ namespace Actions
         {
             for (int i = new_size; i < old_size; i++)
             {
-                memcpy(palette->GetColorList()->at(i).data(), this->old_colors + i * 3, sizeof(float) * 3);
+                memcpy(palette->GetColorList().at(i).data(), this->old_colors + i * 3, sizeof(float) * 3);
             }
         }
     }
@@ -606,14 +626,26 @@ namespace Actions
     void ModifyColor::undo(Editor *editor)
     {
         Palette *palette = this->GetPalette(editor);
-        float *color = palette->GetColorList()->at(idx).data();
+        float *color = palette->GetColorList().at(idx).data();
         memcpy(color, this->old_color, sizeof(float) * 3);
     }
 
     void ModifyColor::redo(Editor *editor)
     {
         Palette *palette = this->GetPalette(editor);
-        float *color = palette->GetColorList()->at(idx).data();
+        float *color = palette->GetColorList().at(idx).data();
         memcpy(color, this->new_color, sizeof(float) * 3);
+    }
+
+    void SwapColors::undo(Editor *editor)
+    {
+        Palette *palette = this->GetPalette(editor);
+        ::SwapColors(palette->GetColorList().at(old_idx), palette->GetColorList().at(new_idx));
+    }
+
+    void SwapColors::redo(Editor *editor)
+    {
+        Palette *palette = this->GetPalette(editor);
+        ::SwapColors(palette->GetColorList().at(old_idx), palette->GetColorList().at(new_idx));
     }
 }
