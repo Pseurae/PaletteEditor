@@ -171,6 +171,17 @@ void Editor::InitGLFW()
         editor->OpenPalette(path.c_str());
     });
 
+    glfwSetWindowCloseCallback(m_Window, [](GLFWwindow *window) {
+        Editor *editor = static_cast<Editor *>(glfwGetWindowUserPointer(window));
+        if (editor->m_Dirty)
+        {
+            glfwSetWindowShouldClose(window, GLFW_FALSE);
+            editor->m_PopupCtrl.ShowPrompt("There are unsaved changes.\nDo you want to quit?", [window](){
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+            }, nullptr);
+        }
+    });
+
     m_DPIScaling = std::max((float)fb_w / win_w, (float)fb_h / win_h);
 }
 
@@ -270,18 +281,20 @@ void Editor::ExitGLFW(void)
 }
 
 #if defined(__APPLE__)
-static const char *sText_FileShortcuts[3] =
+static const char *sText_FileShortcuts[] =
 {
     "Cmd+O",
     "Cmd+S",
     "Cmd+Shift+S",
+    "Cmd+Q"
 };
 #else
-static const char *sText_FileShortcuts[3] =
+static const char *sText_FileShortcuts[] =
 {
     "Ctrl+O",
     "Ctrl+S",
     "Ctrl+Shift+S",
+    "Ctrl+Q"
 };
 #endif
 
@@ -302,6 +315,18 @@ void Editor::MenuBar(void)
             if (ImGui::MenuItem("Save As", sText_FileShortcuts[2]))
             {
                 this->SavePalette(true);
+            }
+            if (ImGui::MenuItem("Quit", sText_FileShortcuts[3]))
+            {
+                const char *s;
+                if (this->m_Dirty)
+                    s = "There are unsaved changes.\nDo you want to quit?";
+                else
+                    s = "Do you want to quit?";
+
+                m_PopupCtrl.ShowPrompt(s, [this](){
+                    glfwSetWindowShouldClose(this->m_Window, GLFW_TRUE);
+                }, nullptr);
             }
             ImGui::EndMenu();
         }
