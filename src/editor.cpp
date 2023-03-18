@@ -303,7 +303,7 @@ void Editor::Logger(void)
                 ImGui::SameLine();
 
                 ImGui::BeginGroup();
-                action->print_details(this);
+                action->PrintDetails(this);
                 ImGui::EndGroup();
             }
         }
@@ -627,7 +627,7 @@ void Editor::Undo(void)
         return;
 
     auto action = m_UndoStack.front();
-    action->undo(this);
+    action->Undo(this);
     m_UndoStack.pop_front();
     m_RedoStack.push_front(std::shared_ptr<Actions::EditActionBase>(action));
 }
@@ -710,7 +710,7 @@ namespace Actions
             free(this->old_colors);
     }
 
-    void ChangeColorCount::undo(Editor *editor)
+    void ChangeColorCount::Undo(Editor *editor)
     {
         Palette *palette = this->GetPalette(editor);
         palette->ResizePalette(old_size);
@@ -729,7 +729,7 @@ namespace Actions
         palette->ResizePalette(new_size);
     }
 
-    void ChangeColorCount::print_details(Editor *editor)
+    void ChangeColorCount::PrintDetails(Editor *editor)
     {
         ImGui::Text("%d -> %d", old_size, new_size);
     }
@@ -741,7 +741,7 @@ namespace Actions
         memcpy(this->new_color, new_color, sizeof(float) * 3);
     }
 
-    void ModifyColor::undo(Editor *editor)
+    void ModifyColor::Undo(Editor *editor)
     {
         Palette *palette = this->GetPalette(editor);
         float *color = palette->GetColorList().at(idx).data();
@@ -755,7 +755,7 @@ namespace Actions
         memcpy(color, this->new_color, sizeof(float) * 3);
     }
 
-    void ModifyColor::print_details(Editor *editor)
+    void ModifyColor::PrintDetails(Editor *editor)
     {
         ImVec4 col;
 
@@ -773,7 +773,7 @@ namespace Actions
         ImGui::ColorButton("##new", col, 0, ImVec2(15.0f, 15.0f));
     }
 
-    void SwapColors::undo(Editor *editor)
+    void SwapColors::Undo(Editor *editor)
     {
         Palette *palette = this->GetPalette(editor);
         ::SwapColors(palette->GetColorList().at(old_idx), palette->GetColorList().at(new_idx));
@@ -785,7 +785,7 @@ namespace Actions
         ::SwapColors(palette->GetColorList().at(old_idx), palette->GetColorList().at(new_idx));
     }
 
-    void SwapColors::print_details(Editor *editor)
+    void SwapColors::PrintDetails(Editor *editor)
     {
         float *col;
         ImVec4 col_v4;

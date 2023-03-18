@@ -94,10 +94,10 @@ struct EditActionBase
 
     Palette *GetPalette(Editor *editor);
 
-    virtual void undo(Editor *) = 0;
+    virtual void Undo(Editor *) = 0;
     virtual void redo(Editor *) = 0;
     virtual std::string to_string() = 0;
-    virtual void print_details(Editor *) = 0;
+    virtual void PrintDetails(Editor *) = 0;
 };
 
 struct ChangeColorCount : EditActionBase
@@ -110,9 +110,9 @@ struct ChangeColorCount : EditActionBase
     ~ChangeColorCount();
 
     virtual void redo(Editor *) override;
-    virtual void undo(Editor *) override;
+    virtual void Undo(Editor *) override;
     virtual std::string to_string() override { return "ChangeColorCount"; };
-    virtual void print_details(Editor *) override;
+    virtual void PrintDetails(Editor *) override;
 };
 
 struct ModifyColor : EditActionBase
@@ -124,9 +124,9 @@ struct ModifyColor : EditActionBase
     ModifyColor(int idx, float *old_color, float *new_color);
 
     virtual void redo(Editor *) override;
-    virtual void undo(Editor *) override;
+    virtual void Undo(Editor *) override;
     virtual std::string to_string() override { return "ModifyColor"; };
-    virtual void print_details(Editor *) override;
+    virtual void PrintDetails(Editor *) override;
 };
 
 struct SwapColors : EditActionBase
@@ -134,8 +134,8 @@ struct SwapColors : EditActionBase
     int old_idx, new_idx;
     SwapColors(int old_idx, int new_idx) : old_idx(old_idx), new_idx(new_idx) {}
     virtual void redo(Editor *) override;
-    virtual void undo(Editor *) override;
+    virtual void Undo(Editor *) override;
     virtual std::string to_string() override { return "SwapColors"; };
-    virtual void print_details(Editor *) override;
+    virtual void PrintDetails(Editor *) override;
 };
 }
