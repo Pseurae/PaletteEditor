@@ -13,8 +13,8 @@ Palette::~Palette()
 {
 }
 
-static const char sText_JASC_PAL[] = "JASC-PAL";
-static const char sText_PAL_0100[] = "0100";
+static constexpr char sText_JASC_PAL[] = "JASC-PAL";
+static constexpr char sText_PAL_0100[] = "0100";
 
 void Palette::LoadFromFile(std::ifstream &stream)
 {

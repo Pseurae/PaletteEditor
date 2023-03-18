@@ -2,6 +2,8 @@
 #include <GLFW/glfw3.h>
 
 #include "imgui.h"
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui_internal.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
@@ -10,6 +12,7 @@
 #include "editor.hpp"
 #include "palette.hpp"
 
+#include <iostream>
 #include <algorithm>
 #include <fstream>
 
@@ -217,12 +220,14 @@ void Editor::StartFrame(void)
 
     ImGuiViewport *viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->Pos);
-    ImGui::SetNextWindowSize(viewport->Size);
+    ImGui::SetNextWindowSize(viewport->Size - ImVec2(0.0f, ImGui::GetFrameHeight()));
 
     ImGui::Begin("PalEditor", NULL, windowflags);
     m_PopupCtrl.Popups();
     this->MenuBar();
     ImGui::End();
+
+    this->StatusBar();
 }
 
 void Editor::Frame(void)
@@ -349,19 +354,16 @@ void Editor::MenuBar(void)
 
 void Editor::DetailsBar(void)
 {
-    // ImGui::BeginChild("Details", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_AlwaysAutoResize);
+    int old_num = m_Palette->GetPaletteSize();
     int num_colors = m_Palette->GetPaletteSize();
 
     if (ImGui::InputInt("No. of Colors", &num_colors))
-    {
         num_colors = std::min(std::max(1, num_colors), 255);
-    }
 
-    if (ImGui::IsItemDeactivatedAfterEdit())
+    if (ImGui::IsItemDeactivatedAfterEdit() && old_num != num_colors)
         this->ResizePalette(num_colors);
 
     ImGui::TextWrapped("Path:\n%s", m_LoadedFile.empty() ? "No file opened." : m_LoadedFile.c_str());
-    // ImGui::EndChild();
 }
 
 static void SwapColors(Color &c1, Color &c2)
@@ -390,19 +392,20 @@ void Editor::PaletteEditor(void)
         {
             if (!has_cached_color)
                 memcpy(cached_color, colorlist.at(i).data(), sizeof(float) * 3);
+
             has_cached_color = true;
         }
 
         if (ImGui::IsItemDeactivatedAfterEdit())
         {
             this->RegisterAction(new Actions::ModifyColor(i, cached_color, colorlist.at(i).data()));
-            m_Dirty = true;
             has_cached_color = false;
+            m_Dirty = true;
         }
 
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
         {
-            ImGui::SetDragDropPayload("DND_DEMO_CELL", &i, sizeof(int));
+            ImGui::SetDragDropPayload("ColorDND", &i, sizeof(int));
 
             const float *col = colorlist.at(i).data();
             const ImVec4 col_v4(col[0], col[1], col[2], 1.0f);
@@ -413,19 +416,50 @@ void Editor::PaletteEditor(void)
 
         if (ImGui::BeginDragDropTarget())
         {
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_CELL"))
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ColorDND"))
             {
                 IM_ASSERT(payload->DataSize == sizeof(int));
                 int target = *(const int*)payload->Data;
                 SwapColors(colorlist.at(i), colorlist.at(target));
-                m_Dirty = true;
                 this->RegisterAction(new Actions::SwapColors(i, target));
+                m_Dirty = true;
             }
             ImGui::EndDragDropTarget();
         }
     }
 
     ImGui::EndChild();
+}
+
+void Editor::StatusBar(void)
+{
+    const ImGuiViewport *viewport = ImGui::GetMainViewport();
+
+    auto barPos = ImVec2(viewport->Pos.x, viewport->Pos.y + viewport->Size.y - ImGui::GetFrameHeight());
+    auto barSize = ImVec2(viewport->Size.x, ImGui::GetFrameHeight());
+
+    ImGui::SetNextWindowPos(barPos);
+    ImGui::SetNextWindowSize(barSize);
+
+    ImGuiWindowFlags flags = 
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_MenuBar |
+        ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBackground | 
+        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
+
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+    ImGui::Begin("##StatusBar", nullptr, flags);
+
+    ImGui::SetCursorPosX(8);
+    if (ImGui::BeginMenuBar())
+    {
+        ImGui::Text("Action Stack: %lu (Undo) | %lu (Redo)", m_UndoStack.size(), m_RedoStack.size());
+        ImGui::EndMenuBar();
+    }
+
+    ImGui::End();
+    ImGui::PopStyleVar();
 }
 
 static constexpr const char *sFilterPatterns[] = { "*.pal" };

@@ -61,6 +61,7 @@ public:
     void MenuBar(void);
     void DetailsBar(void);
     void PaletteEditor(void);
+    void StatusBar(void);
 
     void OpenPalette(const char *);
     void PromptOpenPalette(void);
