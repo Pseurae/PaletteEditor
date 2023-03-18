@@ -29,6 +29,8 @@ struct Popup
     void ShowError(std::string msg, Action ok_action);
 };
 
+using ActionList = std::list<std::shared_ptr<Actions::EditActionBase>>;
+
 class Editor
 {
 private:
@@ -38,9 +40,10 @@ private:
     float m_DPIScaling;
     std::string m_LoadedFile;
     bool m_Dirty = false;
+    bool m_Logger = false;
 
-    std::list<std::shared_ptr<Actions::EditActionBase>> m_RedoStack;
-    std::list<std::shared_ptr<Actions::EditActionBase>> m_UndoStack;
+    ActionList m_RedoStack;
+    ActionList m_UndoStack;
 
 public:
     Editor();
@@ -58,6 +61,7 @@ public:
     void ExitImGui(void);
     void ExitGLFW(void);
 
+    void Logger(void);
     void MenuBar(void);
     void DetailsBar(void);
     void PaletteEditor(void);
@@ -92,6 +96,8 @@ struct EditActionBase
 
     virtual void undo(Editor *) = 0;
     virtual void redo(Editor *) = 0;
+    virtual std::string to_string() = 0;
+    virtual void print_details(Editor *) = 0;
 };
 
 struct ChangeColorCount : EditActionBase
@@ -103,8 +109,10 @@ struct ChangeColorCount : EditActionBase
     ChangeColorCount(int old_size, int new_size, ColorList *old_colors);
     ~ChangeColorCount();
 
-    void redo(Editor *) override;
-    void undo(Editor *) override;
+    virtual void redo(Editor *) override;
+    virtual void undo(Editor *) override;
+    virtual std::string to_string() override { return "ChangeColorCount"; };
+    virtual void print_details(Editor *) override;
 };
 
 struct ModifyColor : EditActionBase
@@ -115,15 +123,19 @@ struct ModifyColor : EditActionBase
 
     ModifyColor(int idx, float *old_color, float *new_color);
 
-    void redo(Editor *) override;
-    void undo(Editor *) override;
+    virtual void redo(Editor *) override;
+    virtual void undo(Editor *) override;
+    virtual std::string to_string() override { return "ModifyColor"; };
+    virtual void print_details(Editor *) override;
 };
 
 struct SwapColors : EditActionBase
 {
     int old_idx, new_idx;
     SwapColors(int old_idx, int new_idx) : old_idx(old_idx), new_idx(new_idx) {}
-    void redo(Editor *) override;
-    void undo(Editor *) override;
+    virtual void redo(Editor *) override;
+    virtual void undo(Editor *) override;
+    virtual std::string to_string() override { return "SwapColors"; };
+    virtual void print_details(Editor *) override;
 };
 }

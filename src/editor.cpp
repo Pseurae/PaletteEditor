@@ -223,6 +223,7 @@ void Editor::StartFrame(void)
     ImGui::SetNextWindowSize(viewport->Size - ImVec2(0.0f, ImGui::GetFrameHeight()));
 
     ImGui::Begin("PalEditor", NULL, windowflags);
+    this->Logger();
     m_PopupCtrl.Popups();
     this->MenuBar();
     ImGui::End();
@@ -285,6 +286,55 @@ void Editor::ExitGLFW(void)
     glfwTerminate();
 }
 
+void Editor::Logger(void)
+{
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size * 0.75, ImGuiCond_Appearing);
+    int flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove;
+    bool tmp = true;
+
+    auto printActions = [this](const ActionList &list) {
+        ImGui::BeginChild("###list", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_NoDecoration);
+        {
+            for (auto it = list.rbegin(); it != list.rend(); ++it)
+            {
+                auto action = *it;
+                ImGui::Text("%s", action->to_string().c_str());
+                ImGui::SameLine();
+
+                ImGui::BeginGroup();
+                action->print_details(this);
+                ImGui::EndGroup();
+            }
+        }
+        ImGui::EndChild();
+    };
+
+    if (ImGui::BeginPopupModal("Logger", &tmp, flags))
+    {
+        ImGui::BeginTabBar("LoggerActions");
+
+        if (ImGui::BeginTabItem("Undo"))
+        {
+            printActions(m_UndoStack);
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Redo"))
+        {
+            printActions(m_RedoStack);
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+
+        ImGui::EndPopup();
+    }
+
+    if (this->m_Logger)
+        ImGui::OpenPopup("Logger");
+
+    this->m_Logger = false;
+}
+
 #if defined(__APPLE__)
 static const char *sText_FileShortcuts[] =
 {
@@ -320,6 +370,10 @@ void Editor::MenuBar(void)
             if (ImGui::MenuItem("Save As", sText_FileShortcuts[2]))
             {
                 this->SavePalette(true);
+            }
+            if (ImGui::MenuItem("Logger", nullptr))
+            {
+                this->m_Logger = true;
             }
             if (ImGui::MenuItem("Quit", sText_FileShortcuts[3]))
             {
@@ -675,6 +729,11 @@ namespace Actions
         palette->ResizePalette(new_size);
     }
 
+    void ChangeColorCount::print_details(Editor *editor)
+    {
+        ImGui::Text("%d -> %d", old_size, new_size);
+    }
+
     ModifyColor::ModifyColor(int idx, float *old_color, float *new_color)
     {
         this->idx = idx;
@@ -696,6 +755,24 @@ namespace Actions
         memcpy(color, this->new_color, sizeof(float) * 3);
     }
 
+    void ModifyColor::print_details(Editor *editor)
+    {
+        ImVec4 col;
+
+        ImGui::Text("%d", idx);
+        ImGui::SameLine();
+
+        col = ImVec4(old_color[0], old_color[1], old_color[2], 1.0);
+        ImGui::ColorButton("##old", col, 0, ImVec2(15.0f, 15.0f));
+
+        ImGui::SameLine();
+        ImGui::Text("->");
+        ImGui::SameLine();
+
+        col = ImVec4(new_color[0], new_color[1], new_color[2], 1.0);
+        ImGui::ColorButton("##new", col, 0, ImVec2(15.0f, 15.0f));
+    }
+
     void SwapColors::undo(Editor *editor)
     {
         Palette *palette = this->GetPalette(editor);
@@ -706,5 +783,31 @@ namespace Actions
     {
         Palette *palette = this->GetPalette(editor);
         ::SwapColors(palette->GetColorList().at(old_idx), palette->GetColorList().at(new_idx));
+    }
+
+    void SwapColors::print_details(Editor *editor)
+    {
+        float *col;
+        ImVec4 col_v4;
+        Palette *palette = this->GetPalette(editor);
+
+        col = palette->GetColorList().at(new_idx).data();
+        col_v4 = ImVec4(col[0], col[1], col[2], 1.0f);
+
+        ImGui::Text("%d", old_idx);
+        ImGui::SameLine();
+
+        ImGui::ColorButton("##first", col_v4, 0, ImVec2(15.0f, 15.0f));
+        ImGui::SameLine();
+
+        ImGui::Text("->");
+        ImGui::SameLine();
+
+        col = palette->GetColorList().at(old_idx).data();
+        col_v4 = ImVec4(col[0], col[1], col[2], 1.0f);
+
+        ImGui::Text("%d", new_idx);
+        ImGui::SameLine();
+        ImGui::ColorButton("##second", col_v4, 0, ImVec2(15.0f, 15.0f));
     }
 }
