@@ -14,7 +14,7 @@ private:
     ColorList m_Colors;
 public:
     Palette();
-    ~Palette();
+    ~Palette() = default;
 
     void LoadFromFile(std::ifstream &stream);
     void SaveToFile(std::ofstream &stream);

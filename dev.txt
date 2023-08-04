@@ -1,0 +1,3 @@
+Different color viewing layouts (grid, list, ...)
+Combine 16 palettes into one or more 256 ones
+Split 256 palette into 16 ones 

@@ -25,8 +25,8 @@ struct Popup
     PopupMode m_Mode;
 
     void Popups(void);
-    void ShowPrompt(std::string msg, Action yes_action, Action no_action);
-    void ShowError(std::string msg, Action ok_action);
+    void ShowPrompt(const std::string &msg, Action yes_action, Action no_action);
+    void ShowError(const std::string &msg, Action ok_action);
 };
 
 using ActionList = std::list<std::shared_ptr<Actions::EditActionBase>>;

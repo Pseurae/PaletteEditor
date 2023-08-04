@@ -1,55 +1,42 @@
 #include "palette.hpp"
-#include <string>
-#include <sstream>
-#include <stdexcept>
-#include <cstring>
+
+static constexpr char sText_JASC_PAL[] = "JASC-PAL";
+static constexpr char sText_PAL_0100[] = "0100";
 
 Palette::Palette()
 {
     m_Colors.resize(1);
 }
 
-Palette::~Palette()
-{
-}
-
-static constexpr char sText_JASC_PAL[] = "JASC-PAL";
-static constexpr char sText_PAL_0100[] = "0100";
-
 void Palette::LoadFromFile(std::ifstream &stream)
 {
     std::vector<Color> new_colors;
     std::string line;
-    std::stringstream sstream;
 
     uint16_t num_colors;
     int r, g, b;
 
-    std::getline(stream, line);
+    stream >> line;
+    if (line != sText_JASC_PAL) 
+        throw ("Invalid JASC-PAL signature.");
 
-    if (strncmp(line.c_str(), sText_JASC_PAL, 8) != 0) 
-        throw std::string("Invalid JASC-PAL signature.");
+    stream >> line;
+    if (line != sText_PAL_0100) 
+        throw ("Unsupported JASC-PAL version.");
 
-    std::getline(stream, line);
-    if (strncmp(line.c_str(), sText_PAL_0100, 4) != 0) 
-        throw std::string("Unsupported JASC-PAL version.");
-
-    std::getline(stream, line);
-    num_colors = std::stoi(line);
+    if (!(stream >> num_colors))
+        throw ("Could not parse number of colors.");
 
     if (num_colors < 1 || num_colors > 256)
-        throw std::string("Unsupported number of colors. (Color count must be between 1 and 256)");
+        throw ("Unsupported number of colors. (Color count must be between 1 and 256)");
 
     for (int i = 0; i < num_colors; i++)
     {
-        std::getline(stream, line);
-        sstream = std::stringstream(line);
-
-        if (!(sstream >> r >> g >> b))
-            throw std::string("Error parsing color components.");
+        if (!(stream >> r >> g >> b))
+            throw ("Error parsing color components.");
 
         if (r < 0 || g < 0 || b < 0 || r > 255 || g > 255 || b > 255)
-            throw std::string("Color component value must be between 0 and 255.");
+            throw ("Color component value must be between 0 and 255.");
 
         new_colors.push_back({ 
             static_cast<float>(r / 255.0f), 

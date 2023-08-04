@@ -18,14 +18,27 @@
 
 void Popup::Popups(void)
 {
-    ImGuiWindowFlags popupflags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse;
+    ImGuiWindowFlags popupflags = ImGuiWindowFlags_AlwaysAutoResize;
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 4.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 10.0f));
 
+    switch (this->m_Mode)
+    {
+    case PopupMode::None:
+        break;
+    case PopupMode::Prompt:
+        ImGui::OpenPopup("Prompt");
+        break;
+    case PopupMode::Error:
+        ImGui::OpenPopup("Error");
+        break;    
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetMainViewport()->Size.x / 4 * 3, 0), ImGuiCond_Always);
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if (ImGui::BeginPopupModal("Prompt", NULL, popupflags))
     {
-        ImGui::Text("%s", m_PopupMessage.c_str());
+        ImGui::TextWrapped("%s", m_PopupMessage.c_str());
 
         ImGui::Spacing();
 
@@ -50,10 +63,11 @@ void Popup::Popups(void)
         ImGui::EndPopup();
     }
 
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetMainViewport()->Size.x / 4 * 3, 0), ImGuiCond_Always);
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if (ImGui::BeginPopupModal("Error", NULL, popupflags))
     {
-        ImGui::Text("%s", m_PopupMessage.c_str());
+        ImGui::TextWrapped("%s", m_PopupMessage.c_str());
 
         if (ImGui::Button("Ok"))
         {
@@ -65,23 +79,10 @@ void Popup::Popups(void)
     }
 
     ImGui::PopStyleVar(2);
-
-    switch (this->m_Mode)
-    {
-    case PopupMode::None:
-        break;
-    case PopupMode::Prompt:
-        ImGui::OpenPopup("Prompt");
-        break;
-    case PopupMode::Error:
-        ImGui::OpenPopup("Error");
-        break;    
-    }
-
     this->m_Mode = PopupMode::None;
 }
 
-void Popup::ShowPrompt(std::string msg, Popup::Action yes_action, Popup::Action no_action)
+void Popup::ShowPrompt(const std::string &msg, Popup::Action yes_action, Popup::Action no_action)
 {
     m_PopupMessage = msg;
     m_YesAction = yes_action;
@@ -89,7 +90,7 @@ void Popup::ShowPrompt(std::string msg, Popup::Action yes_action, Popup::Action 
     m_Mode = PopupMode::Prompt;
 }
 
-void Popup::ShowError(std::string msg, Popup::Action ok_action)
+void Popup::ShowError(const std::string& msg, Popup::Action ok_action)
 {
     m_PopupMessage = msg;
     m_YesAction = ok_action;
@@ -98,7 +99,7 @@ void Popup::ShowError(std::string msg, Popup::Action ok_action)
 
 static void glfw_error_callback(int error, const char *description)
 {
-    fprintf(stderr, "Glfw Error %d: %s\n", error, description);
+    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
 Editor::Editor()
@@ -530,7 +531,7 @@ void Editor::OpenPalette(const char *path)
         {
             m_Palette->LoadFromFile(palfile);
         }
-        catch (std::string c)
+        catch (const char *c)
         {
             this->m_PopupCtrl.ShowError(c, nullptr);
             return;
