@@ -1,6 +1,9 @@
-[submodule "third_party/glfw"]
-	path = third_party/glfw
+[submodule "external/glfw"]
+	path = external/glfw
 	url = https://github.com/glfw/glfw
-[submodule "third_party/imgui/imgui"]
-	path = third_party/imgui/imgui
+[submodule "external/imgui/imgui"]
+	path = external/imgui/imgui
 	url = https://github.com/ocornut/imgui
+[submodule "external/nfd"]
+	path = external/nfd
+	url = https://github.com/btzy/nativefiledialog-extended

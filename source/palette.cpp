@@ -65,8 +65,3 @@ void Palette::SaveToFile(std::ofstream &stream)
         stream << r << ' ' << g << ' ' << b << "\r\n";
     }
 }
-
-ColorList &Palette::GetColorList(void)
-{
-    return m_Colors;
-}
