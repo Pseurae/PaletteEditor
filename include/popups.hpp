@@ -10,13 +10,19 @@ class Popup
 {
 public:
     using PopupCallback = std::function<void()>;
-    Popup(const std::string &name, bool modal) : m_Name(name), m_Modal(modal) { }
+    Popup(const std::string &name, bool modal, bool showCloseButton = false, int flags = 0) : 
+        m_Name(name), m_Modal(modal), m_ShowCloseButton(showCloseButton), m_PopupFlags(flags) { }
     virtual void Draw() = 0;
+    virtual void PreDraw() = 0; 
     constexpr const auto &GetName() const { return m_Name; }
     constexpr const bool IsModal() const { return m_Modal; }
+    constexpr const int GetPopupFlags() const { return m_PopupFlags; }
+    constexpr const bool ShowCloseButton() const { return m_ShowCloseButton; }
 private:
     std::string m_Name;
     bool m_Modal;
+    bool m_ShowCloseButton;
+    int m_PopupFlags;
 };
 
 class PopupManager

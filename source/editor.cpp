@@ -17,6 +17,7 @@
 #include "actions/swap_colors.hpp"
 
 #include "popups/error.hpp"
+#include "popups/logger.hpp"
 #include "popups/prompt.hpp"
 
 #include <iostream>
@@ -140,7 +141,6 @@ void Editor::StartFrame(void)
     ImGui::SetNextWindowSize(viewport->Size - ImVec2(0.0f, ImGui::GetFrameHeight()));
 
     ImGui::Begin("PalEditor", NULL, windowflags);
-    this->Logger();
     m_PopupManager.UpdateAndDraw();
     this->MenuBar();
     ImGui::End();
@@ -203,55 +203,6 @@ void Editor::ExitGLFW(void)
     glfwTerminate();
 }
 
-void Editor::Logger(void)
-{
-    // ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    // ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size * 0.75, ImGuiCond_Appearing);
-    // int flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove;
-    // bool tmp = true;
-
-    // auto printActions = [this](const ActionList &list) {
-    //     ImGui::BeginChild("###list", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_NoDecoration);
-    //     {
-    //         for (auto it = list.rbegin(); it != list.rend(); ++it)
-    //         {
-    //             auto action = *it;
-    //             ImGui::Text("%s", action->to_string().c_str());
-    //             ImGui::SameLine();
-
-    //             ImGui::BeginGroup();
-    //             action->PrintDetails(this);
-    //             ImGui::EndGroup();
-    //         }
-    //     }
-    //     ImGui::EndChild();
-    // };
-
-    // if (ImGui::BeginPopupModal("Logger", &tmp, flags))
-    // {
-    //     ImGui::BeginTabBar("LoggerActions");
-
-    //     if (ImGui::BeginTabItem("Undo"))
-    //     {
-    //         printActions(m_UndoStack);
-    //         ImGui::EndTabItem();
-    //     }
-    //     if (ImGui::BeginTabItem("Redo"))
-    //     {
-    //         printActions(m_RedoStack);
-    //         ImGui::EndTabItem();
-    //     }
-    //     ImGui::EndTabBar();
-
-    //     ImGui::EndPopup();
-    // }
-
-    // if (this->m_Logger)
-    //     ImGui::OpenPopup("Logger");
-
-    // this->m_Logger = false;
-}
-
 #if defined(__APPLE__)
 static const char *sText_FileShortcuts[] =
 {
@@ -290,7 +241,7 @@ void Editor::MenuBar(void)
             }
             if (ImGui::MenuItem("Logger", nullptr))
             {
-                this->m_Logger = true;
+                m_PopupManager.OpenPopup<Popups::Logger>();
             }
             if (ImGui::MenuItem("Quit", sText_FileShortcuts[3]))
             {

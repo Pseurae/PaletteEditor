@@ -1,6 +1,8 @@
 #include "actions/change_color_count.hpp"
 #include "context.hpp"
 
+#include <imgui.h>
+
 namespace Actions
 {
     ChangeColorCount::ChangeColorCount(size_t _old, size_t _new) : m_OldSize(_old), m_NewSize(_new)
@@ -21,5 +23,10 @@ namespace Actions
 
         for (size_t i = 0; i < m_Colors.size(); ++i)
             Context::palette[m_NewSize + i] = m_Colors[i];
+    }
+
+    void ChangeColorCount::PrintDetails()
+    {
+        ImGui::Text("%d -> %d", m_OldSize, m_NewSize);
     }
 }

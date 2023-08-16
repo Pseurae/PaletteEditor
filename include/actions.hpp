@@ -63,6 +63,9 @@ public:
 
     bool CanUndo() { return !m_UndoStack.empty(); }
     bool CanRedo() { return !m_RedoStack.empty(); }
+
+    const auto &GetRedoStack() const { return m_RedoStack; }
+    const auto &GetUndoStack() const { return m_UndoStack; }
 private:
     std::list<std::shared_ptr<Action>> m_RedoStack, m_UndoStack;
 };

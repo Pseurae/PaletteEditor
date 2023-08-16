@@ -43,7 +43,6 @@ private:
 
     PopupManager m_PopupManager;
     GLFWwindow *m_Window;
-    bool m_Logger = false;
 };
 
 #endif // EDITOR_HPP

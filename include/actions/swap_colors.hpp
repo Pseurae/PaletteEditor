@@ -8,13 +8,13 @@ namespace Actions
     class SwapColors final : public Action
     {
     public:
-        SwapColors(size_t start, size_t old) : m_Start(start), m_Old(old) { }
+        SwapColors(size_t start, size_t end) : m_Start(start), m_End(end) { }
         virtual void Apply() override;
         virtual void Revert() override;
         virtual std::string ToString() { return "SwapColors"; }
-        virtual void PrintDetails() {}
+        virtual void PrintDetails() override;
     private:
-        size_t m_Start, m_Old;
+        size_t m_Start, m_End;
     };
 }
 

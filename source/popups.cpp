@@ -28,18 +28,18 @@ void PopupManager::UpdatePopupStates()
 
 void PopupManager::DrawAllPopups()
 {
-    ImGuiWindowFlags popupflags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration;
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 4.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 10.0f));
 
     for (auto &popup : m_OpenedPopups)
     {
-        ImGui::SetNextWindowSize(ImVec2(ImGui::GetMainViewport()->Size.x / 4 * 3, 0), ImGuiCond_Always);
-        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        popup->PreDraw();
+        bool tmp = true;
 
+        int popupFlags = popup->GetPopupFlags() | ImGuiWindowFlags_AlwaysAutoResize;
         bool canDraw = popup->IsModal() ? 
-            ImGui::BeginPopupModal(popup->GetName().c_str(), nullptr, popupflags) : 
-            ImGui::BeginPopup(popup->GetName().c_str(), popupflags);
+            ImGui::BeginPopupModal(popup->GetName().c_str(), popup->ShowCloseButton() ? &tmp : nullptr, popupFlags) : 
+            ImGui::BeginPopup(popup->GetName().c_str(), popupFlags);
 
         if (canDraw)
         {

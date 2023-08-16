@@ -22,6 +22,7 @@ add_executable(
     source/actions/swap_colors.cpp
 
     source/popups/error.cpp
+    source/popups/logger.cpp
     source/popups/prompt.cpp
 
     source/actions.cpp

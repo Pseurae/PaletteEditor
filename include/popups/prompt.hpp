@@ -8,8 +8,8 @@ namespace Popups
     class Prompt : public Popup
     {
     public:
-        Prompt(const std::string &name, const std::string &message, PopupCallback yes = nullptr, PopupCallback no = nullptr) : 
-            Popup(name, true), m_Message(message), m_YesCallback(yes), m_NoCallback(no) {}
+        Prompt(const std::string &name, const std::string &message, PopupCallback yes = nullptr, PopupCallback no = nullptr);
+        virtual void PreDraw() override;
         virtual void Draw() override;
     private:
         std::string m_Message;

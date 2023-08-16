@@ -14,7 +14,7 @@ namespace Actions
         virtual void Apply() override;
         virtual void Revert() override;
         virtual std::string ToString() { return "ModifyColor"; }
-        virtual void PrintDetails() {}
+        virtual void PrintDetails() override;
     private:
         size_t m_Index;
         Color m_OldColor, m_NewColor;

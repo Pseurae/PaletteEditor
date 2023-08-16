@@ -8,7 +8,8 @@ namespace Popups
     class Error : public Popup
     {
     public:
-        Error(const std::string &name, const std::string &message, PopupCallback ok = nullptr) : Popup(name, true), m_Message(message), m_OkCallback(ok) {}
+        Error(const std::string &name, const std::string &message, PopupCallback ok = nullptr);
+        virtual void PreDraw() override;
         virtual void Draw() override;
     private:
         std::string m_Message;
