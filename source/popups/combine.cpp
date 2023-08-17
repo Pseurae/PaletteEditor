@@ -100,9 +100,11 @@ namespace Popups
             ImGui::CloseCurrentPopup();
 
         ImGui::BeginChild("##Filenames", ImVec2(0, 0), true);
+
         for (size_t i = 0; i < m_Files.size(); ++i)
         {
-            auto path = std::filesystem::path(m_Files[i]).filename();
+            auto &fpath = m_Files[i];
+            auto fname = std::filesystem::path(fpath).filename().string();
             ImGui::BeginGroup();
 
             float cursorY = ImGui::GetCursorPosY();
@@ -110,24 +112,14 @@ namespace Popups
 
             float windowWidth = ImGui::GetContentRegionAvail().x;
 
-            ImGui::Text(path.string().c_str());
-
-            ImGui::SameLine();
-
-            ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - 70.0f);
-            ImGui::SetCursorPosY(cursorY);
-            if (ImGui::Button("Remove", ImVec2(70.0f, 0.0f)))
-            {
-                m_Files.erase(std::find(m_Files.begin(), m_Files.end(), m_Files[i]));
-                CombineFiles();
-            }
+            ImGui::Text(fname.c_str());
 
             ImGui::EndGroup();
 
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
             {
                 ImGui::SetDragDropPayload("FilenameDND", &i, sizeof(size_t));
-                ImGui::Text(path.string().c_str());
+                ImGui::Text(fname.c_str());
                 ImGui::EndDragDropSource();
             }
 
@@ -137,13 +129,25 @@ namespace Popups
                 {
                     IM_ASSERT(payload->DataSize == sizeof(size_t));
                     size_t target = *(const size_t*)payload->Data;
-                    std::string tmp = m_Files[i];
-                    m_Files[i] = m_Files[target];
+                    std::string tmp = fpath;
+                    fpath = m_Files[target];
                     m_Files[target] = tmp;
 
                     CombineFiles();
                 }
                 ImGui::EndDragDropTarget();
+            }
+
+            ImGui::SameLine();
+
+            ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - 70.0f);
+            ImGui::SetCursorPosY(cursorY);
+
+            ImGui::PushID(i);
+            if (ImGui::Button("Remove", ImVec2(70.0f, 0.0f)))
+            {
+                m_Files.erase(m_Files.begin() + i);
+                CombineFiles();
             }
         }
         ImGui::EndChild();
@@ -153,7 +157,7 @@ namespace Popups
     {
         int num_colors = m_Palette.size();
 
-        ImGui::InputInt("No. of Colors", &num_colors);
+        ImGui::InputInt("No. of Colors", &num_colors, 1, 100, ImGuiInputTextFlags_ReadOnly);
         if (ImGui::Button("Load"))
         {
             Load();
