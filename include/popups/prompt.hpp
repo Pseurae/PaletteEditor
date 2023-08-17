@@ -5,7 +5,7 @@
 
 namespace Popups
 {
-    class Prompt : public Popup
+    class Prompt final : public Popup
     {
     public:
         Prompt(const std::string &name, const std::string &message, PopupCallback yes = nullptr, PopupCallback no = nullptr);

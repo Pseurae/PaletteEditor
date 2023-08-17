@@ -1,6 +1,15 @@
 #include "context.hpp"
 
-Palette Context::palette;
-ActionRegister Context::actionRegister;
-bool Context::isDirty;
-std::string Context::loadedFile;
+Context gContext{};
+
+Context *Context::s_CurrentContext = &gContext;
+
+void Context::SetContextToDefault()
+{
+    s_CurrentContext = &gContext;
+}
+
+auto &Context::GetDefaultContext()
+{
+    return gContext;
+}

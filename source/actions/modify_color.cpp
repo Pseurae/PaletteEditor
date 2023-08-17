@@ -6,12 +6,12 @@ namespace Actions
 {
     void ModifyColor::Apply()
     {
-        Context::palette[m_Index] = m_NewColor;
+        Context::GetContext().palette[m_Index] = m_NewColor;
     }
 
     void ModifyColor::Revert()
     {
-        Context::palette[m_Index] = m_OldColor;
+        Context::GetContext().palette[m_Index] = m_OldColor;
     }
 
     void ModifyColor::PrintDetails()

@@ -29,7 +29,6 @@ private:
     void ExitImGui(void);
     void ExitGLFW(void);
 
-    void Logger(void);
     void MenuBar(void);
     void DetailsBar(void);
     void PaletteEditor(void);
@@ -38,6 +37,8 @@ private:
     void OpenPalette(const char *);
     void PromptOpenPalette(void);
     void SavePalette(bool);
+
+    void StartPalettesCombine(void);
 
     void ProcessShortcuts(int key, int mod);
 

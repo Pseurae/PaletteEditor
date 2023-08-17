@@ -16,6 +16,7 @@
 #include "actions/modify_color.hpp"
 #include "actions/swap_colors.hpp"
 
+#include "popups/combine.hpp"
 #include "popups/error.hpp"
 #include "popups/logger.hpp"
 #include "popups/prompt.hpp"
@@ -100,7 +101,7 @@ void Editor::InitGLFW()
 
     glfwSetWindowCloseCallback(m_Window, [](GLFWwindow *window) {
         Editor *editor = static_cast<Editor *>(glfwGetWindowUserPointer(window));
-        if (Context::isDirty)
+        if (Context::GetContext().isDirty)
         {
             glfwSetWindowShouldClose(window, GLFW_FALSE);
             editor->m_PopupManager.OpenPopup<Popups::Prompt>("dirty_buffer_prompt", "There are unsaved changes.\nDo you want to quit?", [window](){
@@ -246,14 +247,14 @@ void Editor::MenuBar(void)
             if (ImGui::MenuItem("Quit", sText_FileShortcuts[3]))
             {
                 const char *s;
-                if (Context::isDirty)
+                if (Context::GetContext().isDirty)
                     s = "There are unsaved changes.\nDo you want to quit?";
                 else
                     s = "Do you want to quit?";
 
                 m_PopupManager.OpenPopup<Popups::Prompt>("dirty_buffer_prompt", s, [this](){
                     glfwSetWindowShouldClose(this->m_Window, GLFW_TRUE);
-                }, nullptr);
+                });
             }
             ImGui::EndMenu();
         }
@@ -261,11 +262,23 @@ void Editor::MenuBar(void)
         if (ImGui::BeginMenu("Edit"))
         {
 #if defined(__APPLE__)
-            if (ImGui::MenuItem("Undo", "Cmd+Z", false, m_ActionRegister.CanUndo())) m_ActionRegister.Undo();
-            if (ImGui::MenuItem("Redo", "Cmd+R", false, m_ActionRegister.CanRedo())) m_ActionRegister.Redo();
+            if (ImGui::MenuItem("Undo", "Cmd+Z", nullptr, m_ActionRegister.CanUndo())) m_ActionRegister.Undo();
+            if (ImGui::MenuItem("Redo", "Cmd+R", nullptr, m_ActionRegister.CanRedo())) m_ActionRegister.Redo();
 #else
-            if (ImGui::MenuItem("Undo", "Ctrl+Z", false, Context::actionRegister.CanUndo())) Context::actionRegister.Undo();
-            if (ImGui::MenuItem("Redo", "Ctrl+R", false, Context::actionRegister.CanRedo())) Context::actionRegister.Redo();
+            if (ImGui::MenuItem("Undo", "Ctrl+Z", nullptr, Context::GetContext().actionRegister.CanUndo())) Context::GetContext().actionRegister.Undo();
+            if (ImGui::MenuItem("Redo", "Ctrl+R", nullptr, Context::GetContext().actionRegister.CanRedo())) Context::GetContext().actionRegister.Redo();
+#endif
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Others"))
+        {
+#if defined(__APPLE__)
+            if (ImGui::MenuItem("Combine Palettes")) StartPalettesCombine();
+            if (ImGui::MenuItem("Split Palette")) {}
+#else
+            if (ImGui::MenuItem("Combine Palettes", "Ctrl+Shift+K")) StartPalettesCombine();
+            if (ImGui::MenuItem("Split Palette")) {}
 #endif
             ImGui::EndMenu();
         }
@@ -276,53 +289,47 @@ void Editor::MenuBar(void)
 
 void Editor::DetailsBar(void)
 {
-    int num_colors = Context::palette.size();
+    int num_colors = Context::GetContext().palette.size();
 
     if (ImGui::InputInt("No. of Colors", &num_colors))
         num_colors = std::min(std::max(1, num_colors), 255);
 
-    if (ImGui::IsItemDeactivatedAfterEdit() && Context::palette.size() != num_colors)
+    if (ImGui::IsItemDeactivatedAfterEdit() && Context::GetContext().palette.size() != num_colors)
     {
-        Context::actionRegister.RegisterAction<Actions::ChangeColorCount>(Context::palette.size(), (size_t)num_colors);
-        Context::isDirty = true;
+        Context::GetContext().actionRegister.RegisterAction<Actions::ChangeColorCount>(Context::GetContext().palette.size(), (size_t)num_colors);
+        Context::GetContext().isDirty = true;
     }
 
-    ImGui::TextWrapped("Path:\n%s", Context::loadedFile.empty() ? "No file opened." : Context::loadedFile.c_str());
-}
-
-static void SwapColors(Color &c1, Color &c2)
-{
-    Color tmp = c2;
-    c2 = c1;
-    c1 = tmp;
+    ImGui::TextWrapped("Path:\n%s", Context::GetContext().loadedFile.empty() ? "No file opened." : Context::GetContext().loadedFile.c_str());
 }
 
 void Editor::PaletteEditor(void)
 {
     static bool hasCachedColor = false;
     static Color cachedColor;
+    auto &palette = Context::GetContext().palette;
 
     ImGui::BeginChild("Colors", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_AlwaysAutoResize);
-    for (int i = 0; i < Context::palette.size(); i++)
+    for (int i = 0; i < palette.size(); i++)
     {
         char label[10];
         snprintf(label, 10, "Color #%i", i);
 
-        auto &color = Context::palette[i];
+        auto &color = palette[i];
         ImGui::ColorEdit3(label, (float *)&color, ImGuiColorEditFlags_NoDragDrop);
 
         if (ImGui::IsItemActivated())
         {
             if (!hasCachedColor)
-                cachedColor = Context::palette[i];
+                cachedColor = palette[i];
 
             hasCachedColor = true;
         }
 
         if (ImGui::IsItemDeactivatedAfterEdit())
         {
-            Context::actionRegister.RegisterAction<Actions::ModifyColor>(i, cachedColor, color);
-            Context::isDirty = true;
+            Context::GetContext().actionRegister.RegisterAction<Actions::ModifyColor>(i, cachedColor, color);
+            Context::GetContext().isDirty = true;
             hasCachedColor = false;
         }
 
@@ -330,7 +337,7 @@ void Editor::PaletteEditor(void)
         {
             ImGui::SetDragDropPayload("ColorDND", &i, sizeof(size_t));
 
-            const auto &col = Context::palette[i];
+            const auto &col = palette[i];
             const ImVec4 col_v4(col[0], col[1], col[2], 1.0f);
             ImGui::ColorButton("##preview", col_v4); ImGui::SameLine();
             ImGui::Text("Color");
@@ -343,9 +350,8 @@ void Editor::PaletteEditor(void)
             {
                 IM_ASSERT(payload->DataSize == sizeof(size_t));
                 int target = *(const size_t*)payload->Data;
-                Context::actionRegister.RegisterAction<Actions::SwapColors>(i, target);
-                // this->RegisterAction(new Actions::SwapColors(i, target));
-                Context::isDirty = true;
+                Context::GetContext().actionRegister.RegisterAction<Actions::SwapColors>(i, target);
+                Context::GetContext().isDirty = true;
             }
             ImGui::EndDragDropTarget();
         }
@@ -377,7 +383,8 @@ void Editor::StatusBar(void)
     ImGui::SetCursorPosX(8);
     if (ImGui::BeginMenuBar())
     {
-        // ImGui::Text("Action Stack: %lu (Undo) | %lu (Redo)", m_UndoStack.size(), m_RedoStack.size());
+        const auto &undoStack = Context::GetContext().actionRegister.GetRedoStack(), &redoStack = Context::GetContext().actionRegister.GetUndoStack();
+        ImGui::Text("Action Stack: %lu (Undo) | %lu (Redo)", undoStack.size(), redoStack.size());
         ImGui::EndMenuBar();
     }
 
@@ -397,7 +404,7 @@ void Editor::OpenPalette(const char *path)
     {
         try
         {
-            Context::palette.LoadFromFile(palfile);
+            Context::GetContext().palette.LoadFromFile(palfile);
         }
         catch (const char *c)
         {
@@ -408,13 +415,13 @@ void Editor::OpenPalette(const char *path)
 
     palfile.close();
 
-    Context::loadedFile = new_file;
-    Context::isDirty = false;
+    Context::GetContext().loadedFile = new_file;
+    Context::GetContext().isDirty = false;
 }
 
 void Editor::PromptOpenPalette(void)
 {
-    if (Context::isDirty)
+    if (Context::GetContext().isDirty)
     {
         m_PopupManager.OpenPopup<Popups::Prompt>(
             "dirty_buffer_prompt",
@@ -423,42 +430,44 @@ void Editor::PromptOpenPalette(void)
             {
                 char *path;
                 nfdresult_t result = NFD_OpenDialog(&path, sFilterPatterns, 1, 0);
-                if (result == NFD_OKAY)
-                    this->OpenPalette(path);
+                if (result != NFD_OKAY)
+                    return;
+
+                this->OpenPalette(path);
                 NFD_FreePath(path);
-            },
-            nullptr
+            }
         );
     }
     else
     {
         char *path;
         nfdresult_t result = NFD_OpenDialog(&path, sFilterPatterns, 1, 0);
-        if (result == NFD_OKAY)
-            this->OpenPalette(path);
+        if (result != NFD_OKAY)
+            return;
+        this->OpenPalette(path);
         NFD_FreePath(path);
     }
 }
 
 void Editor::SavePalette(bool promptFilepath)
 {
-    if (Context::loadedFile.empty() || promptFilepath)
+    if (Context::GetContext().loadedFile.empty() || promptFilepath)
     {
         char *path;
         nfdresult_t result = NFD_SaveDialog(&path, sFilterPatterns, 1, 0, 0);
 
         if (result == NFD_OKAY)
-            Context::loadedFile = std::string(path);
+            Context::GetContext().loadedFile = std::string(path);
         else
             return;
     }
 
-    std::ofstream palfile(Context::loadedFile, std::ios::out);
+    std::ofstream palfile(Context::GetContext().loadedFile, std::ios::out);
     if (palfile.is_open())
     {
         try
         {
-            Context::palette.SaveToFile(palfile);
+            Context::GetContext().palette.SaveToFile(palfile);
         }
         catch (const char *c)
         {
@@ -467,8 +476,13 @@ void Editor::SavePalette(bool promptFilepath)
         }
     }
 
-    Context::isDirty = false;
+    Context::GetContext().isDirty = false;
     palfile.close();
+}
+
+void Editor::StartPalettesCombine(void)
+{
+    m_PopupManager.OpenPopup<Popups::Combine>();
 }
 
 void Editor::ProcessShortcuts(int key, int mods)
@@ -487,10 +501,14 @@ void Editor::ProcessShortcuts(int key, int mods)
                 this->SavePalette(false);
             break;
         case GLFW_KEY_Z:
-            Context::actionRegister.Undo();
+            Context::GetContext().actionRegister.Undo();
             break;
         case GLFW_KEY_R:
-            Context::actionRegister.Redo();
+            Context::GetContext().actionRegister.Redo();
+            break;
+        case GLFW_KEY_K:
+            if (mods & GLFW_MOD_SHIFT)
+                StartPalettesCombine();
             break;
         }
     }

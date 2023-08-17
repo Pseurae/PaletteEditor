@@ -32,6 +32,7 @@ public:
     constexpr void resize(int size) { m_Colors.resize(size); }
 
     constexpr void clear() { m_Colors.clear(); }
+    void operator+=(const Palette &other) { m_Colors.insert(m_Colors.end(), other.m_Colors.begin(), other.m_Colors.end()); }
 private:
     std::vector<Color> m_Colors;
 };

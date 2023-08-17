@@ -14,12 +14,12 @@ namespace Actions
 {
     void SwapColors::Apply()
     {
-        ::SwapColors(Context::palette[m_Start], Context::palette[m_End]);
+        ::SwapColors(Context::GetContext().palette[m_Start], Context::GetContext().palette[m_End]);
     }
 
     void SwapColors::Revert()
     {
-        ::SwapColors(Context::palette[m_Start], Context::palette[m_End]);
+        ::SwapColors(Context::GetContext().palette[m_Start], Context::GetContext().palette[m_End]);
     }
 
     void SwapColors::PrintDetails()
@@ -27,7 +27,7 @@ namespace Actions
         Color color;
         ImVec4 col_v4;
 
-        color = Context::palette[m_Start];
+        color = Context::GetContext().palette[m_Start];
         col_v4 = ImVec4(color[0], color[1], color[2], 1.0f);
 
         ImGui::Text("%d", m_End);
@@ -39,7 +39,7 @@ namespace Actions
         ImGui::Text("->");
         ImGui::SameLine();
 
-        color = Context::palette[m_End];
+        color = Context::GetContext().palette[m_End];
         col_v4 = ImVec4(color[0], color[1], color[2], 1.0f);
 
         ImGui::Text("%d", m_Start);

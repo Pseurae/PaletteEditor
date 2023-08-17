@@ -10,8 +10,13 @@ namespace Popups
 
     void Logger::PreDraw()
     {
-        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size * 0.75f, ImGuiCond_Appearing);
+        auto pos = ImGui::GetMainViewport()->Pos;
+        auto size = ImGui::GetWindowSize();
+
+        auto center = ImVec2(pos.x + size.x * 0.5f, pos.y + size.y * 0.5f);
+
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(size * 0.75f, ImGuiCond_Appearing);
     }
 
     void Logger::Draw()
@@ -37,12 +42,12 @@ namespace Popups
 
         if (ImGui::BeginTabItem("Undo"))
         {
-            printActions(Context::actionRegister.GetUndoStack());
+            printActions(Context::GetContext().actionRegister.GetUndoStack());
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Redo"))
         {
-            printActions(Context::actionRegister.GetRedoStack());
+            printActions(Context::GetContext().actionRegister.GetRedoStack());
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();

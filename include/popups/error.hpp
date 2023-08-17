@@ -5,7 +5,7 @@
 
 namespace Popups
 {
-    class Error : public Popup
+    class Error final : public Popup
     {
     public:
         Error(const std::string &name, const std::string &message, PopupCallback ok = nullptr);
