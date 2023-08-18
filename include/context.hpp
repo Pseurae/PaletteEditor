@@ -20,8 +20,8 @@ struct Context
 
     static const bool HasNoContext() { return s_OpenContexts.empty() || s_CurrentContext == nullptr; }
 
-    static void CreateNewContext();
-    static void CreateNewContext(const std::string &fname);
+    static Context &CreateNewContext();
+    static Context &CreateNewContext(const std::string &fname);
     static auto &GetOpenContexts() { return s_OpenContexts; } 
     static void RemoveContext(size_t i);
 private:

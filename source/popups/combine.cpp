@@ -22,12 +22,8 @@ namespace Popups
 
         for (auto &path : m_Files)
         {
-            std::ifstream stream(path);
-            if (stream.is_open())
-            {
-                temp.LoadFromFile(stream);
-                m_Palette += temp;
-            }
+            temp.LoadFromFile(path);
+            m_Palette += temp;
         }
     }
 
@@ -65,7 +61,24 @@ namespace Popups
 
     void Combine::Load()
     {
-        Context::GetContext().palette = m_Palette;
+        size_t numFiles = m_Palette.size() / 256;
+        size_t remaining = m_Palette.size() % 256;
+
+        for (size_t i = 0; i < numFiles; ++i)
+        {
+            auto &ctx = Context::CreateNewContext();
+            ctx.palette.resize(256);
+            for (size_t j = 0; j < 256; ++j)
+                ctx.palette[j] = m_Palette[i * 256 + j];
+        }
+
+        if (remaining > 0)
+        {
+            auto &ctx = Context::CreateNewContext();
+            ctx.palette.resize(remaining);
+            for (size_t i = 0; i < remaining; ++i)
+                ctx.palette[i] = m_Palette[numFiles * 256 + i];
+        }
     }
 
     static const nfdfilteritem_t sFilterPatterns[] = { {"Palette Files", "pal"} };
