@@ -1,15 +1,27 @@
 #include "context.hpp"
+#include <fstream>
 
-Context gContext{};
+std::vector<std::unique_ptr<Context>> Context::s_OpenContexts;
+Context *Context::s_CurrentContext = 0;
 
-Context *Context::s_CurrentContext = &gContext;
-
-void Context::SetContextToDefault()
+Context::Context(const std::string &fname) : loadedFile(fname), isDirty(false)
 {
-    s_CurrentContext = &gContext;
+    palette.LoadFromFile(fname);
 }
 
-auto &Context::GetDefaultContext()
+void Context::CreateNewContext()
 {
-    return gContext;
+    s_OpenContexts.push_back(std::make_unique<Context>());
+    s_CurrentContext = s_OpenContexts.back().get();
+}
+
+void Context::CreateNewContext(const std::string &fname)
+{
+    s_OpenContexts.push_back(std::make_unique<Context>(fname));
+    s_CurrentContext = s_OpenContexts.back().get();
+}
+
+void Context::RemoveContext(size_t i)
+{
+    s_OpenContexts.erase(s_OpenContexts.begin() + i);
 }

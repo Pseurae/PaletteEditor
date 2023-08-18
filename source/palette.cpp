@@ -8,6 +8,16 @@ Palette::Palette()
     m_Colors.resize(1);
 }
 
+void Palette::LoadFromFile(const std::string &fname)
+{
+    std::ifstream stream(fname);
+    if (stream.is_open())
+    {
+        LoadFromFile(stream);
+    }
+    stream.close();
+}
+
 void Palette::LoadFromFile(std::ifstream &stream)
 {
     std::vector<Color> new_colors;
@@ -47,6 +57,14 @@ void Palette::LoadFromFile(std::ifstream &stream)
 
     m_Colors = new_colors;
     return;
+}
+
+void Palette::SaveToFile(const std::string &fname)
+{
+    std::ofstream stream(fname);
+    if (stream.is_open())
+        SaveToFile(stream);
+    stream.close();
 }
 
 void Palette::SaveToFile(std::ofstream &stream)

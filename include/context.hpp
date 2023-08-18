@@ -9,14 +9,23 @@ struct Context
 {
     Palette palette;
     ActionRegister actionRegister;
-    bool isDirty;
+    bool isDirty = false;
     std::string loadedFile;
 
+    Context() = default;
+    Context(const std::string &fname);
+
     static auto &GetContext() { return *s_CurrentContext; }
-    static constexpr void SetContext(Context *ctx) { s_CurrentContext = ctx; }
-    static void SetContextToDefault();
-    static auto &GetDefaultContext();
+    static void SetContext(size_t idx) { s_CurrentContext = s_OpenContexts[idx].get(); }
+
+    static const bool HasNoContext() { return s_OpenContexts.empty() || s_CurrentContext == nullptr; }
+
+    static void CreateNewContext();
+    static void CreateNewContext(const std::string &fname);
+    static auto &GetOpenContexts() { return s_OpenContexts; } 
+    static void RemoveContext(size_t i);
 private:
+    static std::vector<std::unique_ptr<Context>> s_OpenContexts; 
     static Context *s_CurrentContext;
 };
 

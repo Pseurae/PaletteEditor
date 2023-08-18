@@ -9,6 +9,7 @@
 
 namespace Popups
 {
+    // TODO: Currently ignores the 256 color limit.
     Combine::Combine() :
         Popup("combine", true, true, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration) 
     {

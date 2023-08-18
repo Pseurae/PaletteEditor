@@ -22,7 +22,9 @@ public:
     Palette();
     ~Palette() = default;
 
+    void LoadFromFile(const std::string &fname);
     void LoadFromFile(std::ifstream &stream);
+    void SaveToFile(const std::string &fname);
     void SaveToFile(std::ofstream &stream);
 
     constexpr Color &operator[](size_t idx) { return m_Colors[idx]; }

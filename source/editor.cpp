@@ -24,6 +24,7 @@
 #include <iostream>
 #include <algorithm>
 #include <fstream>
+#include <filesystem>
 
 static void glfw_error_callback(int error, const char *description)
 {
@@ -32,6 +33,7 @@ static void glfw_error_callback(int error, const char *description)
 
 Editor::Editor()
 {
+    Context::CreateNewContext();
     this->InitGLFW();
     this->InitImGui();
 }
@@ -141,7 +143,7 @@ void Editor::StartFrame(void)
     ImGui::SetNextWindowPos(viewport->Pos);
     ImGui::SetNextWindowSize(viewport->Size - ImVec2(0.0f, ImGui::GetFrameHeight()));
 
-    ImGui::Begin("PalEditor", NULL, windowflags);
+    ImGui::Begin("##PaletteEditor", NULL, windowflags);
     m_PopupManager.UpdateAndDraw();
     this->MenuBar();
     ImGui::End();
@@ -151,10 +153,40 @@ void Editor::StartFrame(void)
 
 void Editor::Frame(void)
 {
-    ImGui::Begin("PalEditor", NULL, 0);
-    this->DetailsBar();
+    ImGui::Begin("##PaletteEditor", NULL, 0);
+    ImGui::BeginTabBar("##OpenedFiles", ImGuiTabBarFlags_AutoSelectNewTabs);
+
+    auto &openContexts = Context::GetOpenContexts();
+    for (size_t i = 0; i < openContexts.size(); ++i)
+    {
+        auto &ctx = openContexts[i];
+        auto name = ctx->loadedFile.empty() ? "Untitled" : std::filesystem::path(ctx->loadedFile).filename().string();
+
+        bool isOpen = true;
+        ImGui::PushID(ctx.get());
+
+        int flags = (ctx->isDirty ? ImGuiTabItemFlags_UnsavedDocument : 0) | ImGuiTabItemFlags_NoTooltip;
+
+        if (ImGui::BeginTabItem(name.c_str(), &isOpen, flags))
+        {
+            Context::SetContext(i);
+            ImGui::EndTabItem();
+        }
+
+        if (!isOpen)
+            Context::RemoveContext(i);
+    }
+
     ImGui::Spacing();
-    this->PaletteEditor();
+
+    if (!Context::HasNoContext())
+    {
+        this->DetailsBar();
+        ImGui::Spacing();
+        this->PaletteEditor();
+    }
+
+    ImGui::EndTabBar();
     ImGui::End();
 }
 
@@ -262,11 +294,27 @@ void Editor::MenuBar(void)
         if (ImGui::BeginMenu("Edit"))
         {
 #if defined(__APPLE__)
-            if (ImGui::MenuItem("Undo", "Cmd+Z", nullptr, m_ActionRegister.CanUndo())) m_ActionRegister.Undo();
-            if (ImGui::MenuItem("Redo", "Cmd+R", nullptr, m_ActionRegister.CanRedo())) m_ActionRegister.Redo();
+            if (ImGui::MenuItem("Undo", "Cmd+Z", nullptr, Context::GetContext().actionRegister.CanUndo())) 
+            {
+                Context::GetContext().actionRegister.Undo();
+                Context::GetContext().isDirty = true;
+            }
+            if (ImGui::MenuItem("Redo", "Cmd+R", nullptr, Context::GetContext().actionRegister.CanRedo())) 
+            {
+                Context::GetContext().actionRegister.Redo();
+                Context::GetContext().isDirty = true;
+            }
 #else
-            if (ImGui::MenuItem("Undo", "Ctrl+Z", nullptr, Context::GetContext().actionRegister.CanUndo())) Context::GetContext().actionRegister.Undo();
-            if (ImGui::MenuItem("Redo", "Ctrl+R", nullptr, Context::GetContext().actionRegister.CanRedo())) Context::GetContext().actionRegister.Redo();
+            if (ImGui::MenuItem("Undo", "Ctrl+Z", nullptr, Context::GetContext().actionRegister.CanUndo())) 
+            {
+                Context::GetContext().actionRegister.Undo();
+                Context::GetContext().isDirty = true;
+            }
+            if (ImGui::MenuItem("Redo", "Ctrl+R", nullptr, Context::GetContext().actionRegister.CanRedo())) 
+            {
+                Context::GetContext().actionRegister.Redo();
+                Context::GetContext().isDirty = true;
+            }
 #endif
             ImGui::EndMenu();
         }
@@ -274,10 +322,10 @@ void Editor::MenuBar(void)
         if (ImGui::BeginMenu("Others"))
         {
 #if defined(__APPLE__)
-            if (ImGui::MenuItem("Combine Palettes")) StartPalettesCombine();
+            if (ImGui::MenuItem("Combine Palettes", "Cmd+Shift+K")) m_PopupManager.OpenPopup<Popups::Combine>();
             if (ImGui::MenuItem("Split Palette")) {}
 #else
-            if (ImGui::MenuItem("Combine Palettes", "Ctrl+Shift+K")) StartPalettesCombine();
+            if (ImGui::MenuItem("Combine Palettes", "Ctrl+Shift+K")) m_PopupManager.OpenPopup<Popups::Combine>();
             if (ImGui::MenuItem("Split Palette")) {}
 #endif
             ImGui::EndMenu();
@@ -396,27 +444,7 @@ static const nfdfilteritem_t sFilterPatterns[] = { {"Palette Files", "pal"} };
 
 void Editor::OpenPalette(const char *path)
 {
-
-    std::string new_file = std::string(path, strlen(path));
-    std::ifstream palfile(new_file, std::ios::in);
-
-    if (palfile.is_open())
-    {
-        try
-        {
-            Context::GetContext().palette.LoadFromFile(palfile);
-        }
-        catch (const char *c)
-        {
-            m_PopupManager.OpenPopup<Popups::Error>("cannot_open_palette", c);
-            return;
-        }
-    }
-
-    palfile.close();
-
-    Context::GetContext().loadedFile = new_file;
-    Context::GetContext().isDirty = false;
+    Context::CreateNewContext(path);
 }
 
 void Editor::PromptOpenPalette(void)
@@ -462,27 +490,8 @@ void Editor::SavePalette(bool promptFilepath)
             return;
     }
 
-    std::ofstream palfile(Context::GetContext().loadedFile, std::ios::out);
-    if (palfile.is_open())
-    {
-        try
-        {
-            Context::GetContext().palette.SaveToFile(palfile);
-        }
-        catch (const char *c)
-        {
-            printf("%s\n", c);
-            return;
-        }
-    }
-
+    Context::GetContext().palette.SaveToFile(Context::GetContext().loadedFile);
     Context::GetContext().isDirty = false;
-    palfile.close();
-}
-
-void Editor::StartPalettesCombine(void)
-{
-    m_PopupManager.OpenPopup<Popups::Combine>();
 }
 
 void Editor::ProcessShortcuts(int key, int mods)
@@ -502,13 +511,15 @@ void Editor::ProcessShortcuts(int key, int mods)
             break;
         case GLFW_KEY_Z:
             Context::GetContext().actionRegister.Undo();
+            Context::GetContext().isDirty = true;
             break;
         case GLFW_KEY_R:
             Context::GetContext().actionRegister.Redo();
+            Context::GetContext().isDirty = true;
             break;
         case GLFW_KEY_K:
             if (mods & GLFW_MOD_SHIFT)
-                StartPalettesCombine();
+                m_PopupManager.OpenPopup<Popups::Combine>();
             break;
         }
     }
