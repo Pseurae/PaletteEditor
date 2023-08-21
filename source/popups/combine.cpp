@@ -40,7 +40,7 @@ namespace Popups
 
     void Combine::Draw()
     {
-        ImGui::BeginTabBar("LoggerActions", ImGuiTabBarFlags_NoTooltip);
+        ImGui::BeginTabBar("CombineSections", ImGuiTabBarFlags_NoTooltip);
 
         if (ImGui::BeginTabItem("Files"))
         {
@@ -70,20 +70,18 @@ namespace Popups
         size_t numFiles = m_Palette.size() / 256;
         size_t remaining = m_Palette.size() % 256;
 
-        for (size_t i = 0; i < numFiles; ++i)
+        for (size_t i = 0; i < m_Palette.size(); ++i)
         {
-            auto &ctx = Context::CreateNewContext();
-            ctx.palette.resize(256);
-            for (size_t j = 0; j < 256; ++j)
-                ctx.palette[j] = m_Palette[i * 256 + j];
-        }
-
-        if (remaining > 0)
-        {
-            auto &ctx = Context::CreateNewContext();
-            ctx.palette.resize(remaining);
-            for (size_t i = 0; i < remaining; ++i)
-                ctx.palette[i] = m_Palette[numFiles * 256 + i];
+            if (i % 256 == 0)
+            {
+                auto &ctx = Context::CreateNewContext();
+                ctx.isDirty = true;
+                if (i / 256 != numFiles)
+                    ctx.palette.resize(256);
+                else
+                    ctx.palette.resize(remaining);
+            }
+            Context::GetContext().palette[i % 256] = m_Palette[i];
         }
     }
 
@@ -187,9 +185,7 @@ namespace Popups
         ImGui::SameLine();
         
         if (ImGui::Button("Cancel"))
-        {
             ImGui::CloseCurrentPopup();
-        }
 
         ImGui::Spacing();
 

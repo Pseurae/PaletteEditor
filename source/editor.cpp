@@ -20,6 +20,7 @@
 #include "popups/error.hpp"
 #include "popups/logger.hpp"
 #include "popups/prompt.hpp"
+#include "popups/split.hpp"
 
 #include <filesystem>
 
@@ -339,10 +340,10 @@ void Editor::MenuBar(void)
         {
 #if defined(__APPLE__)
             if (ImGui::MenuItem("Combine Palettes", "Cmd+Shift+K")) m_PopupManager.OpenPopup<Popups::Combine>();
-            if (ImGui::MenuItem("Split Palette")) {}
+            if (ImGui::MenuItem("Split Palette", "Cmd+Shift+L")) m_PopupManager.OpenPopup<Popups::Split>();
 #else
             if (ImGui::MenuItem("Combine Palettes", "Ctrl+Shift+K")) m_PopupManager.OpenPopup<Popups::Combine>();
-            if (ImGui::MenuItem("Split Palette")) {}
+            if (ImGui::MenuItem("Split Palette", "Ctrl+Shift+L")) m_PopupManager.OpenPopup<Popups::Split>();
 #endif
             ImGui::EndMenu();
         }
@@ -519,6 +520,9 @@ void Editor::ProcessShortcuts(int key, int mods)
         case GLFW_KEY_K:
             if (mods & GLFW_MOD_SHIFT)
                 m_PopupManager.OpenPopup<Popups::Combine>();
+        case GLFW_KEY_L:
+            if (mods & GLFW_MOD_SHIFT)
+                m_PopupManager.OpenPopup<Popups::Split>();
             break;
         }
     }

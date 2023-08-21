@@ -25,6 +25,7 @@ add_executable(
     source/popups/error.cpp
     source/popups/logger.cpp
     source/popups/prompt.cpp
+    source/popups/split.cpp
 
     source/actions.cpp
     source/context.cpp

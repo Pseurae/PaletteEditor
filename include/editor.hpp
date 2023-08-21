@@ -1,13 +1,8 @@
 #ifndef EDITOR_HPP
 #define EDITOR_HPP
 
-#include <string>
-#include <list>
-
 #include "palette.hpp"
 #include "popups.hpp"
-
-#include <functional>
 
 struct GLFWwindow;
 
@@ -37,8 +32,6 @@ private:
     void OpenPalette(const char *);
     void PromptOpenPalette(void);
     void SavePalette(bool);
-
-    void StartPalettesCombine(void);
 
     void ProcessShortcuts(int key, int mod);
 
