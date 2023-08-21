@@ -8,6 +8,11 @@ Palette::Palette()
     m_Colors.resize(1);
 }
 
+Palette::Palette(size_t i)
+{
+    m_Colors.assign(i, { 0.0f, 0.0f, 0.0f });
+}
+
 void Palette::LoadFromFile(const std::string &fname)
 {
     std::ifstream stream(fname);

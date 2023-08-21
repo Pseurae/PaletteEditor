@@ -6,12 +6,13 @@
 #include <fstream>
 #include <filesystem>
 #include <nfd.h>
+#include <format>
 
 namespace Popups
 {
-    // TODO: Currently ignores the 256 color limit.
     Combine::Combine() :
-        Popup("combine", true, true, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration) 
+        Popup("combine", true, true, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration),
+        m_Palette(0)
     {
     }
 
@@ -39,7 +40,7 @@ namespace Popups
 
     void Combine::Draw()
     {
-        ImGui::BeginTabBar("LoggerActions");
+        ImGui::BeginTabBar("LoggerActions", ImGuiTabBarFlags_NoTooltip);
 
         if (ImGui::BeginTabItem("Files"))
         {
@@ -49,10 +50,15 @@ namespace Popups
 
         if (ImGui::BeginTabItem("Palette"))
         {  
-            auto size = ImGui::GetWindowContentRegionMax();
-            
-            DetailsBar();
-            PaletteEditor();
+            if (!m_Files.empty())
+            {
+                DetailsBar();
+                PaletteEditor();
+            }
+            else
+            {
+                ImGui::Text("No file(s) are selected.");
+            }
             ImGui::EndTabItem();
         }
 
@@ -184,18 +190,41 @@ namespace Popups
         {
             ImGui::CloseCurrentPopup();
         }
+
+        ImGui::Spacing();
+
+        auto windowWidth = ImGui::GetContentRegionAvail().x;
+
+        ImGui::BeginGroup();
+        ImGui::Dummy(ImVec2(windowWidth, ImGui::GetFrameHeight() * 0.25f));
+
+        ImGui::Dummy(ImVec2(ImGui::GetFrameHeight() * 0.25f, 0.0f));
+        ImGui::SameLine();
+        ImGui::Text("This will load %i file(s) into the editor.", (int)std::ceilf(num_colors / 256.0f));
+        ImGui::SameLine();
+        ImGui::Dummy(ImVec2(ImGui::GetFrameHeight() * 0.25f, 0.0f));
+
+        ImGui::Dummy(ImVec2(0.0f, ImGui::GetFrameHeight() * 0.25f));
+        ImGui::EndGroup();
+
+        ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32_WHITE, ImGui::GetFrameHeight() * 0.25f);
+
+        ImGui::Spacing();
     }
 
     void Combine::PaletteEditor()
-    {
+    {            
         ImGui::BeginChild("Colors", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_AlwaysAutoResize);
-        for (int i = 0; i < m_Palette.size(); i++)
-        {
-            char label[10];
-            snprintf(label, 10, "Color #%i", i);
 
+        for (int i = 0; i < m_Palette.size(); ++i)
+        {
+            auto label = std::format("Color #{}", i);
             auto color = m_Palette[i];
-            ImGui::ColorEdit3(label, (float *)&color, ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_NoInputs);
+            ImVec4 color_vec4 = ImVec4(color[0], color[1], color[2], 1.0f);
+            ImGui::ColorButton(label.c_str(), color_vec4, ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_NoInputs, ImVec2(30.0f, 30.0f));
+
+            if (i % 8 != 7)
+                ImGui::SameLine();
         }
 
         ImGui::EndChild();

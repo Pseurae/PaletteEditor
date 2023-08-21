@@ -20,6 +20,7 @@ class Palette
 {
 public:
     Palette();
+    Palette(size_t i);
     ~Palette() = default;
 
     void LoadFromFile(const std::string &fname);
