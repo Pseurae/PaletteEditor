@@ -17,9 +17,7 @@ void Palette::LoadFromFile(const std::string &fname)
 {
     std::ifstream stream(fname);
     if (stream.is_open())
-    {
         LoadFromFile(stream);
-    }
     stream.close();
 }
 

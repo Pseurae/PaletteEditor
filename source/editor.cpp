@@ -21,9 +21,6 @@
 #include "popups/logger.hpp"
 #include "popups/prompt.hpp"
 
-#include <iostream>
-#include <algorithm>
-#include <fstream>
 #include <filesystem>
 
 static void glfw_error_callback(int error, const char *description)
@@ -154,39 +151,64 @@ void Editor::StartFrame(void)
 void Editor::Frame(void)
 {
     ImGui::Begin("##PaletteEditor", NULL, 0);
-    ImGui::BeginTabBar("##OpenedFiles", ImGuiTabBarFlags_AutoSelectNewTabs);
-
     auto &openContexts = Context::GetOpenContexts();
-    for (size_t i = 0; i < openContexts.size(); ++i)
+
+    if (!openContexts.empty())
     {
-        auto &ctx = openContexts[i];
-        auto name = ctx->loadedFile.empty() ? "Untitled" : std::filesystem::path(ctx->loadedFile).filename().string();
+        ImGui::BeginTabBar("##OpenedFiles", ImGuiTabBarFlags_AutoSelectNewTabs);
 
-        bool isOpen = true;
-        ImGui::PushID(ctx.get());
-
-        int flags = (ctx->isDirty ? ImGuiTabItemFlags_UnsavedDocument : 0) | ImGuiTabItemFlags_NoTooltip;
-
-        if (ImGui::BeginTabItem(name.c_str(), &isOpen, flags))
+        for (size_t i = 0; i < openContexts.size(); ++i)
         {
-            Context::SetContext(i);
-            ImGui::EndTabItem();
+            auto &ctx = openContexts[i];
+            auto name = ctx->loadedFile.empty() ? "Untitled" : std::filesystem::path(ctx->loadedFile).filename().string();
+
+            bool isOpen = true;
+            ImGui::PushID(ctx.get());
+
+            int flags = (ctx->isDirty ? ImGuiTabItemFlags_UnsavedDocument : 0) | ImGuiTabItemFlags_NoTooltip;
+
+            if (ImGui::BeginTabItem(name.c_str(), &isOpen, flags))
+            {
+                Context::SetContext(i);
+                ImGui::EndTabItem();
+            }
+
+            if (!isOpen)
+            {
+                if (Context::GetContext().isDirty)
+                {
+                    m_PopupManager.OpenPopup<Popups::Prompt>(
+                        "dirty_buffer_prompt",
+                        "This palette has unsaved changes.\nDo you want to close?",
+                        [i](void)
+                        {
+                            Context::RemoveContext(i);
+                        }
+                    );
+                }
+                else
+                {
+                    Context::RemoveContext(i);
+                }
+            }
         }
 
-        if (!isOpen)
-            Context::RemoveContext(i);
-    }
-
-    ImGui::Spacing();
-
-    if (!Context::HasNoContext())
-    {
-        this->DetailsBar();
         ImGui::Spacing();
-        this->PaletteEditor();
-    }
 
-    ImGui::EndTabBar();
+        if (!Context::HasNoContext())
+        {
+            this->DetailsBar();
+            ImGui::Spacing();
+            this->PaletteEditor();
+        }
+
+        ImGui::EndTabBar();
+    }
+    else
+    {
+        ImGui::Spacing();
+        ImGui::TextWrapped("No files are opened. Press Ctrl + N or goto \"Files > New\".");
+    }
     ImGui::End();
 }
 
@@ -260,22 +282,16 @@ void Editor::MenuBar(void)
     {
         if (ImGui::BeginMenu("File"))
         {
+            if (ImGui::MenuItem("New", "Ctrl+N"))
+                Context::CreateNewContext();
             if (ImGui::MenuItem("Open", sText_FileShortcuts[0])) 
-            {
-                this->PromptOpenPalette();
-            }
+                PromptOpenPalette();
             if (ImGui::MenuItem("Save", sText_FileShortcuts[1])) 
-            {
-                this->SavePalette(false);
-            }
+                SavePalette(false);
             if (ImGui::MenuItem("Save As", sText_FileShortcuts[2]))
-            {
-                this->SavePalette(true);
-            }
+                SavePalette(true);
             if (ImGui::MenuItem("Logger", nullptr))
-            {
                 m_PopupManager.OpenPopup<Popups::Logger>();
-            }
             if (ImGui::MenuItem("Quit", sText_FileShortcuts[3]))
             {
                 const char *s;
@@ -449,32 +465,12 @@ void Editor::OpenPalette(const char *path)
 
 void Editor::PromptOpenPalette(void)
 {
-    if (Context::GetContext().isDirty)
-    {
-        m_PopupManager.OpenPopup<Popups::Prompt>(
-            "dirty_buffer_prompt",
-            "Opening another palette will discard unsaved changes.\nDo you want to continue?",
-            [this](void)
-            {
-                char *path;
-                nfdresult_t result = NFD_OpenDialog(&path, sFilterPatterns, 1, 0);
-                if (result != NFD_OKAY)
-                    return;
-
-                this->OpenPalette(path);
-                NFD_FreePath(path);
-            }
-        );
-    }
-    else
-    {
-        char *path;
-        nfdresult_t result = NFD_OpenDialog(&path, sFilterPatterns, 1, 0);
-        if (result != NFD_OKAY)
-            return;
-        this->OpenPalette(path);
-        NFD_FreePath(path);
-    }
+    char *path;
+    nfdresult_t result = NFD_OpenDialog(&path, sFilterPatterns, 1, 0);
+    if (result != NFD_OKAY)
+        return;
+    this->OpenPalette(path);
+    NFD_FreePath(path);
 }
 
 void Editor::SavePalette(bool promptFilepath)
@@ -500,14 +496,17 @@ void Editor::ProcessShortcuts(int key, int mods)
     {
         switch (key)
         {
+        case GLFW_KEY_N:
+            Context::CreateNewContext();
+            break;
         case GLFW_KEY_O:
-            this->PromptOpenPalette();
+            PromptOpenPalette();
             break;
         case GLFW_KEY_S:
             if (mods & GLFW_MOD_SHIFT)
-                this->SavePalette(true);
+                SavePalette(true);
             else
-                this->SavePalette(false);
+                SavePalette(false);
             break;
         case GLFW_KEY_Z:
             Context::GetContext().actionRegister.Undo();
