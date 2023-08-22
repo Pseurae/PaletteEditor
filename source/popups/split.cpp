@@ -2,6 +2,7 @@
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
+#include <GLFW/glfw3.h>
 
 #include "context.hpp"
 
@@ -29,7 +30,8 @@ namespace Popups
 
         for (size_t i = 0; i < palette.size(); ++i)
         {
-            if (i % m_NumColors == 0)
+            int paletteIdx = i % m_NumColors;
+            if (paletteIdx == 0)
             {
                 auto &ctx = Context::CreateNewContext();
                 ctx.isDirty = true;
@@ -39,25 +41,12 @@ namespace Popups
                     ctx.palette.resize(remaining);
             }
 
-            Context::GetContext().palette[i % m_NumColors] = palette[i];
+            Context::GetContext().palette[paletteIdx] = palette[i];
         }
     }
 
     void Split::Draw()
     {
-        if (ImGui::Button("Load"))
-        {
-            Load();
-            ImGui::CloseCurrentPopup();
-        }
-
-        ImGui::SameLine();
-        
-        if (ImGui::Button("Cancel"))
-            ImGui::CloseCurrentPopup();
-
-        ImGui::Spacing();
-
         int numColors = Context::GetContext().palette.size();
         ImGui::InputInt("Total Colors", &numColors, 0, 0, ImGuiInputTextFlags_ReadOnly);
     
@@ -84,5 +73,27 @@ namespace Popups
         ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32_WHITE, ImGui::GetFrameHeight() * 0.25f);
 
         ImGui::Spacing();
+
+        if (ImGui::Button("Load"))
+        {
+            Load();
+            SetCloseFlag(true);
+        }
+
+        ImGui::SameLine();
+        
+        if (ImGui::Button("Cancel"))
+            SetCloseFlag(true);
+    }
+
+    void Split::ProcessShortcuts(int key, int mods)
+    {
+        if (key == GLFW_KEY_ESCAPE)
+            SetCloseFlag(true);
+        else if (key == GLFW_KEY_ENTER)
+        {
+            Load();
+            SetCloseFlag(true);
+        }
     }
 }

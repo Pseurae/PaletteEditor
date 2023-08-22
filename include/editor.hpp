@@ -33,7 +33,7 @@ private:
     void PromptOpenPalette(void);
     void SavePalette(bool);
 
-    void ProcessShortcuts(int key, int mod);
+    void ProcessShortcuts(int key, int mods);
 
     PopupManager m_PopupManager;
     GLFWwindow *m_Window;

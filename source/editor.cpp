@@ -7,8 +7,10 @@
 #include <imgui_impl_opengl3.h>
 
 #include <nfd.h>
+#include <array>
 
 #include "editor.hpp"
+#include "fs.hpp"
 #include "palette.hpp"
 #include "context.hpp"
 
@@ -22,7 +24,40 @@
 #include "popups/prompt.hpp"
 #include "popups/split.hpp"
 
-#include <filesystem>
+enum 
+{
+    SHORT_NEW,
+    SHORT_OPEN,
+    SHORT_SAVE,
+    SHORT_SAVE_AS,
+    SHORT_QUIT,
+    SHORT_UNDO,
+    SHORT_REDO,
+    SHORT_COMBINE,
+    SHORT_SPLIT,
+    COUNT_SHORT
+};
+
+#if defined(__APPLE__)
+#define sText_Modifier "Cmd"
+#else
+#define sText_Modifier "Ctrl"
+#endif
+
+static constexpr std::array<const char*, COUNT_SHORT> sText_FileShortcuts =
+{
+    sText_Modifier "+N",
+    sText_Modifier "+O",
+    sText_Modifier "+S",
+    sText_Modifier "+Shift+S",
+    sText_Modifier "+Q",
+    sText_Modifier "+Z",
+    sText_Modifier "+R",
+    sText_Modifier "+Shift+K",
+    sText_Modifier "+Shift+L",
+};
+
+#undef sText_Modifier
 
 static void glfw_error_callback(int error, const char *description)
 {
@@ -156,12 +191,12 @@ void Editor::Frame(void)
 
     if (!openContexts.empty())
     {
-        ImGui::BeginTabBar("##OpenedFiles", ImGuiTabBarFlags_AutoSelectNewTabs);
+        ImGui::BeginTabBar("##OpenedFiles", ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable);
 
         for (size_t i = 0; i < openContexts.size(); ++i)
         {
             auto &ctx = openContexts[i];
-            auto name = ctx->loadedFile.empty() ? "Untitled" : std::filesystem::path(ctx->loadedFile).filename().string();
+            auto name = ctx->loadedFile.empty() ? "Untitled" : fs::GetFilename(ctx->loadedFile);
 
             bool isOpen = true;
             ImGui::PushID(ctx.get());
@@ -208,7 +243,11 @@ void Editor::Frame(void)
     else
     {
         ImGui::Spacing();
-        ImGui::TextWrapped("No files are opened. Press Ctrl + N or goto \"Files > New\".");
+        ImGui::TextWrapped("No files are opened.");
+        ImGui::Spacing();
+        ImGui::TextWrapped("Press %s or goto \"Files > New\" to create a new file.", sText_FileShortcuts[SHORT_NEW]);
+        ImGui::Spacing();
+        ImGui::TextWrapped("Press %s or goto \"Files > Open\" to open an existing file.", sText_FileShortcuts[SHORT_OPEN]);
     }
     ImGui::End();
 }
@@ -259,41 +298,23 @@ void Editor::ExitGLFW(void)
     glfwTerminate();
 }
 
-#if defined(__APPLE__)
-static const char *sText_FileShortcuts[] =
-{
-    "Cmd+O",
-    "Cmd+S",
-    "Cmd+Shift+S",
-    "Cmd+Q"
-};
-#else
-static const char *sText_FileShortcuts[] =
-{
-    "Ctrl+O",
-    "Ctrl+S",
-    "Ctrl+Shift+S",
-    "Ctrl+Q"
-};
-#endif
-
 void Editor::MenuBar(void)
 {
     if (ImGui::BeginMenuBar())
     {
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("New", "Ctrl+N"))
+            if (ImGui::MenuItem("New", sText_FileShortcuts[SHORT_NEW]))
                 Context::CreateNewContext();
-            if (ImGui::MenuItem("Open", sText_FileShortcuts[0])) 
+            if (ImGui::MenuItem("Open", sText_FileShortcuts[SHORT_OPEN])) 
                 PromptOpenPalette();
-            if (ImGui::MenuItem("Save", sText_FileShortcuts[1])) 
+            if (ImGui::MenuItem("Save", sText_FileShortcuts[SHORT_SAVE])) 
                 SavePalette(false);
-            if (ImGui::MenuItem("Save As", sText_FileShortcuts[2]))
+            if (ImGui::MenuItem("Save As", sText_FileShortcuts[SHORT_SAVE_AS]))
                 SavePalette(true);
             if (ImGui::MenuItem("Logger", nullptr))
                 m_PopupManager.OpenPopup<Popups::Logger>();
-            if (ImGui::MenuItem("Quit", sText_FileShortcuts[3]))
+            if (ImGui::MenuItem("Quit", sText_FileShortcuts[SHORT_QUIT]))
             {
                 const char *s;
                 if (Context::GetContext().isDirty)
@@ -310,41 +331,23 @@ void Editor::MenuBar(void)
 
         if (ImGui::BeginMenu("Edit"))
         {
-#if defined(__APPLE__)
-            if (ImGui::MenuItem("Undo", "Cmd+Z", nullptr, Context::GetContext().actionRegister.CanUndo())) 
+            if (ImGui::MenuItem("Undo", sText_FileShortcuts[SHORT_UNDO], nullptr, Context::GetContext().actionRegister.CanUndo())) 
             {
                 Context::GetContext().actionRegister.Undo();
                 Context::GetContext().isDirty = true;
             }
-            if (ImGui::MenuItem("Redo", "Cmd+R", nullptr, Context::GetContext().actionRegister.CanRedo())) 
+            if (ImGui::MenuItem("Redo", sText_FileShortcuts[SHORT_REDO], nullptr, Context::GetContext().actionRegister.CanRedo())) 
             {
                 Context::GetContext().actionRegister.Redo();
                 Context::GetContext().isDirty = true;
             }
-#else
-            if (ImGui::MenuItem("Undo", "Ctrl+Z", nullptr, Context::GetContext().actionRegister.CanUndo())) 
-            {
-                Context::GetContext().actionRegister.Undo();
-                Context::GetContext().isDirty = true;
-            }
-            if (ImGui::MenuItem("Redo", "Ctrl+R", nullptr, Context::GetContext().actionRegister.CanRedo())) 
-            {
-                Context::GetContext().actionRegister.Redo();
-                Context::GetContext().isDirty = true;
-            }
-#endif
             ImGui::EndMenu();
         }
 
         if (ImGui::BeginMenu("Others"))
         {
-#if defined(__APPLE__)
-            if (ImGui::MenuItem("Combine Palettes", "Cmd+Shift+K")) m_PopupManager.OpenPopup<Popups::Combine>();
-            if (ImGui::MenuItem("Split Palette", "Cmd+Shift+L")) m_PopupManager.OpenPopup<Popups::Split>();
-#else
-            if (ImGui::MenuItem("Combine Palettes", "Ctrl+Shift+K")) m_PopupManager.OpenPopup<Popups::Combine>();
-            if (ImGui::MenuItem("Split Palette", "Ctrl+Shift+L")) m_PopupManager.OpenPopup<Popups::Split>();
-#endif
+            if (ImGui::MenuItem("Combine Palettes", sText_FileShortcuts[SHORT_COMBINE])) m_PopupManager.OpenPopup<Popups::Combine>();
+            if (ImGui::MenuItem("Split Palette", sText_FileShortcuts[SHORT_SPLIT], nullptr, !Context::GetOpenContexts().empty())) m_PopupManager.OpenPopup<Popups::Split>();
             ImGui::EndMenu();
         }
 
@@ -357,7 +360,7 @@ void Editor::DetailsBar(void)
     int num_colors = Context::GetContext().palette.size();
 
     if (ImGui::InputInt("No. of Colors", &num_colors))
-        num_colors = std::min(std::max(1, num_colors), 255);
+        num_colors = std::min(std::max(1, num_colors), 256);
 
     if (ImGui::IsItemDeactivatedAfterEdit() && Context::GetContext().palette.size() != num_colors)
     {
@@ -377,8 +380,8 @@ void Editor::PaletteEditor(void)
     ImGui::BeginChild("Colors", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_AlwaysAutoResize);
     for (int i = 0; i < palette.size(); i++)
     {
-        char label[10];
-        snprintf(label, 10, "Color #%i", i);
+        char label[20];
+        snprintf(label, 20, "Color #%i", i);
 
         auto &color = palette[i];
         ImGui::ColorEdit3(label, (float *)&color, ImGuiColorEditFlags_NoDragDrop);
@@ -457,8 +460,6 @@ void Editor::StatusBar(void)
     ImGui::PopStyleVar();
 }
 
-static const nfdfilteritem_t sFilterPatterns[] = { {"Palette Files", "pal"} };
-
 void Editor::OpenPalette(const char *path)
 {
     Context::CreateNewContext(path);
@@ -466,24 +467,14 @@ void Editor::OpenPalette(const char *path)
 
 void Editor::PromptOpenPalette(void)
 {
-    char *path;
-    nfdresult_t result = NFD_OpenDialog(&path, sFilterPatterns, 1, 0);
-    if (result != NFD_OKAY)
-        return;
-    this->OpenPalette(path);
-    NFD_FreePath(path);
+    fs::OpenFilePrompt([this](const char *path) { OpenPalette(path); });
 }
 
 void Editor::SavePalette(bool promptFilepath)
 {
     if (Context::GetContext().loadedFile.empty() || promptFilepath)
     {
-        char *path;
-        nfdresult_t result = NFD_SaveDialog(&path, sFilterPatterns, 1, 0, 0);
-
-        if (result == NFD_OKAY)
-            Context::GetContext().loadedFile = std::string(path);
-        else
+        if (!fs::SaveFilePrompt([](const char *path) { Context::GetContext().loadedFile = path; }))
             return;
     }
 
@@ -493,6 +484,12 @@ void Editor::SavePalette(bool promptFilepath)
 
 void Editor::ProcessShortcuts(int key, int mods)
 {
+    if (m_PopupManager.IsAnyPopupOpen())
+    {
+        m_PopupManager.ProcessShortcuts(key, mods);
+        return;
+    }
+
     if (mods & (GLFW_MOD_CONTROL | GLFW_MOD_SUPER))
     {
         switch (key)

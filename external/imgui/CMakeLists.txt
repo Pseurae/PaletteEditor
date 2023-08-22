@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(imgui)
 
-set(CMAKE_CXX_STANDARD 17)
-
-add_library(imgui
+add_library(imgui SHARED
     imgui/imgui_draw.cpp
     imgui/backends/imgui_impl_glfw.cpp
     imgui/backends/imgui_impl_opengl3.cpp

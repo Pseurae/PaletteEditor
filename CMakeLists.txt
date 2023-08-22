@@ -5,6 +5,12 @@ set(CMAKE_CXX_STANDARD 20)
 
 find_package(OpenGL REQUIRED)
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+set(BUILD_SHARED_LIBS TRUE)
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
 add_subdirectory(external/glfw)
 add_subdirectory(external/imgui)
 add_subdirectory(external/nfd)
@@ -30,6 +36,7 @@ add_executable(
     source/actions.cpp
     source/context.cpp
     source/editor.cpp
+    source/fs.cpp
     source/palette.cpp
     source/popups.cpp
     source/main.cpp

@@ -11,16 +11,20 @@ class Popup
 public:
     using PopupCallback = std::function<void()>;
     Popup(const std::string &name, bool modal, bool showCloseButton = false, int flags = 0) : 
-        m_Name(name), m_Modal(modal), m_ShowCloseButton(showCloseButton), m_PopupFlags(flags) { }
+        m_Name(name), m_Modal(modal), m_ShowCloseButton(showCloseButton), m_PopupFlags(flags), m_ShouldBeClosed(false) { }
     virtual void Draw() = 0;
-    virtual void PreDraw() = 0; 
+    virtual void PreDraw() { }
+    virtual void ProcessShortcuts(int key, int mods) { } 
     constexpr const auto &GetName() const { return m_Name; }
     constexpr const bool IsModal() const { return m_Modal; }
     constexpr const int GetPopupFlags() const { return m_PopupFlags; }
     constexpr const bool ShowCloseButton() const { return m_ShowCloseButton; }
+    constexpr const bool GetCloseFlag() { return m_ShouldBeClosed; } 
+    constexpr void SetCloseFlag(bool shouldClose) { m_ShouldBeClosed = shouldClose; } 
 private:
     std::string m_Name;
     bool m_Modal;
+    bool m_ShouldBeClosed;
     bool m_ShowCloseButton;
     int m_PopupFlags;
 };
@@ -56,6 +60,8 @@ public:
     }
 
     void UpdateAndDraw();
+    bool IsAnyPopupOpen();
+    void ProcessShortcuts(int key, int mods);
 private:
     void UpdatePopupStates();
     void DrawAllPopups();

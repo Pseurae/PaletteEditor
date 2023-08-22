@@ -4,15 +4,14 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
 #include <fstream>
-#include <filesystem>
-#include <nfd.h>
-#include <format>
+#include <GLFW/glfw3.h>
+#include "fs.hpp"
 
 namespace Popups
 {
     Combine::Combine() :
         Popup("combine", true, true, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration),
-        m_Palette(0)
+        m_Palette(0), m_Files{}
     {
     }
 
@@ -40,29 +39,61 @@ namespace Popups
 
     void Combine::Draw()
     {
-        ImGui::BeginTabBar("CombineSections", ImGuiTabBarFlags_NoTooltip);
-
-        if (ImGui::BeginTabItem("Files"))
+        float height = ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.y;
+        if (ImGui::BeginChild("##CombineWindow", ImVec2(0.0f, height)))
         {
-            FileDetails();
-            ImGui::EndTabItem();
+            ImGui::BeginTabBar("CombineSections", ImGuiTabBarFlags_NoTooltip);
+
+            if (ImGui::BeginTabItem("Files"))
+            {
+                ImGui::Spacing();
+                FileDetails();
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Palette"))
+            {  
+                ImGui::Spacing();
+                if (!m_Files.empty())
+                {
+                    DetailsBar();
+                    PaletteEditor();
+                }
+                else
+                {
+                    ImGui::Text("No file(s) are selected.");
+                }
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
+
+            ImGui::EndChild();
         }
 
-        if (ImGui::BeginTabItem("Palette"))
-        {  
-            if (!m_Files.empty())
-            {
-                DetailsBar();
-                PaletteEditor();
-            }
-            else
-            {
-                ImGui::Text("No file(s) are selected.");
-            }
-            ImGui::EndTabItem();
+        ImGui::Spacing();
+
+        if (ImGui::Button("Load"))
+        {
+            Load();
+            SetCloseFlag(true);
         }
 
-        ImGui::EndTabBar();
+        ImGui::SameLine();
+        
+        if (ImGui::Button("Cancel"))
+            SetCloseFlag(true);
+    }
+
+    void Combine::ProcessShortcuts(int key, int mods)
+    {
+        if (key == GLFW_KEY_ESCAPE)
+            SetCloseFlag(true);
+        else if (key == GLFW_KEY_ENTER)
+        {
+            Load();
+            SetCloseFlag(true);
+        }
     }
 
     void Combine::Load()
@@ -72,7 +103,8 @@ namespace Popups
 
         for (size_t i = 0; i < m_Palette.size(); ++i)
         {
-            if (i % 256 == 0)
+            int paletteIdx = i % 256;
+            if (paletteIdx == 0)
             {
                 auto &ctx = Context::CreateNewContext();
                 ctx.isDirty = true;
@@ -81,48 +113,27 @@ namespace Popups
                 else
                     ctx.palette.resize(remaining);
             }
-            Context::GetContext().palette[i % 256] = m_Palette[i];
+
+            Context::GetContext().palette[paletteIdx] = m_Palette[i];
         }
     }
-
-    static const nfdfilteritem_t sFilterPatterns[] = { {"Palette Files", "pal"} };
 
     void Combine::FileDetails()
     {
         if (ImGui::Button("Add Palette"))
         {
-            const nfdpathset_t *paths;
-            nfdresult_t result = NFD_OpenDialogMultipleU8(&paths, sFilterPatterns, 1, nullptr);
-
-            if (result == NFD_OKAY)
-            {
-                nfdpathsetsize_t numPaths;
-                NFD_PathSet_GetCount(paths, &numPaths);
-
-                for (nfdpathsetsize_t i = 0; i < numPaths; ++i)
-                {
-                    nfdchar_t* path;
-                    NFD_PathSet_GetPath(paths, i, &path);
-                    m_Files.push_back(path);
-                    NFD_PathSet_FreePath(path);
-                }
-
-                NFD_PathSet_Free(paths);
+            if (fs::OpenFilePrompt([this](const char *path) { m_Files.push_back(path); }))
                 CombineFiles();
-            }
         }
 
-        ImGui::SameLine();
-
-        if (ImGui::Button("Cancel"))
-            ImGui::CloseCurrentPopup();
+        ImGui::Spacing();
 
         ImGui::BeginChild("##Filenames", ImVec2(0, 0), true);
 
         for (size_t i = 0; i < m_Files.size(); ++i)
         {
             auto &fpath = m_Files[i];
-            auto fname = std::filesystem::path(fpath).filename().string();
+            auto fname = fs::GetFilename(fpath);
             ImGui::BeginGroup();
 
             float cursorY = ImGui::GetCursorPosY();
@@ -175,17 +186,7 @@ namespace Popups
     {
         int num_colors = m_Palette.size();
 
-        ImGui::InputInt("No. of Colors", &num_colors, 1, 100, ImGuiInputTextFlags_ReadOnly);
-        if (ImGui::Button("Load"))
-        {
-            Load();
-            ImGui::CloseCurrentPopup();
-        }
-
-        ImGui::SameLine();
-        
-        if (ImGui::Button("Cancel"))
-            ImGui::CloseCurrentPopup();
+        ImGui::InputInt("No. of Colors", &num_colors, 0, 0, ImGuiInputTextFlags_ReadOnly);
 
         ImGui::Spacing();
 
@@ -214,10 +215,11 @@ namespace Popups
 
         for (int i = 0; i < m_Palette.size(); ++i)
         {
-            auto label = std::format("Color #{}", i);
+            char label[20];
+            snprintf(label, 20, "Color #%i", i);
             auto color = m_Palette[i];
             ImVec4 color_vec4 = ImVec4(color[0], color[1], color[2], 1.0f);
-            ImGui::ColorButton(label.c_str(), color_vec4, ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_NoInputs, ImVec2(30.0f, 30.0f));
+            ImGui::ColorButton(label, color_vec4, ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_NoInputs, ImVec2(30.0f, 30.0f));
 
             if (i % 8 != 7)
                 ImGui::SameLine();

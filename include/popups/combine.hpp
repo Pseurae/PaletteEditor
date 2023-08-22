@@ -13,6 +13,7 @@ namespace Popups
         Combine();
         virtual void PreDraw() override;
         virtual void Draw() override;
+        virtual void ProcessShortcuts(int key, int mods) override;
     private:
         void CombineFiles();
         void FileDetails();

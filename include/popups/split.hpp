@@ -11,6 +11,7 @@ namespace Popups
         Split();
         virtual void PreDraw() override;
         virtual void Draw() override;
+        virtual void ProcessShortcuts(int key, int mods) override;
     private:
         void Load();
         size_t m_NumColors = 1;

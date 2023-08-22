@@ -7,6 +7,17 @@ void PopupManager::UpdateAndDraw()
     DrawAllPopups();
 }
 
+bool PopupManager::IsAnyPopupOpen()
+{
+    return m_OpenedPopups.size() > 0;
+}
+
+void PopupManager::ProcessShortcuts(int key, int mods)
+{
+    for (auto &popup : m_OpenedPopups)
+        popup->ProcessShortcuts(key, mods);
+}
+
 void PopupManager::UpdatePopupStates()
 {
     m_PopupsToOpen.remove_if([](const auto &name) {
@@ -44,6 +55,10 @@ void PopupManager::DrawAllPopups()
         if (canDraw)
         {
             popup->Draw();
+
+            if (popup->GetCloseFlag())
+                ImGui::CloseCurrentPopup();
+
             ImGui::EndPopup();
         }
     }
