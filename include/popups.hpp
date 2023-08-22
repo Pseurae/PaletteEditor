@@ -43,11 +43,11 @@ public:
         }
         else if constexpr (std::is_empty_v<T>)
         {
-            m_OpenedPopups.push_front(std::make_shared<T>());
+            m_OpenedPopups.push_front(std::make_unique<T>());
         }
         else if constexpr (requires { T(std::forward<Args>(args)...); })
         {
-            m_OpenedPopups.push_front(std::make_shared<T>(std::forward<Args>(args)...));
+            m_OpenedPopups.push_front(std::make_unique<T>(std::forward<Args>(args)...));
         }
         else
         {
@@ -67,7 +67,7 @@ private:
     void DrawAllPopups();
 
     std::list<std::string> m_PopupsToOpen;
-    std::list<std::shared_ptr<Popup>> m_OpenedPopups;
+    std::list<std::unique_ptr<Popup>> m_OpenedPopups;
 };
 
 #endif // POPUPS_HPP

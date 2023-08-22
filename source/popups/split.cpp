@@ -8,7 +8,7 @@
 
 namespace Popups
 {
-    Split::Split() : Popup("split", true, true, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration)
+    Split::Split() : Popup("split", true, true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration)
     {}
 
     void Split::PreDraw()

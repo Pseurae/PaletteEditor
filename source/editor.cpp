@@ -191,54 +191,58 @@ void Editor::Frame(void)
 
     if (!openContexts.empty())
     {
-        ImGui::BeginTabBar("##OpenedFiles", ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable);
-
-        for (size_t i = 0; i < openContexts.size(); ++i)
+        if (ImGui::BeginTabBar("##OpenedFiles", ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable))
         {
-            auto &ctx = openContexts[i];
-            auto name = ctx->loadedFile.empty() ? "Untitled" : fs::GetFilename(ctx->loadedFile);
 
-            bool isOpen = true;
-            ImGui::PushID(ctx.get());
-
-            int flags = (ctx->isDirty ? ImGuiTabItemFlags_UnsavedDocument : 0) | ImGuiTabItemFlags_NoTooltip;
-
-            if (ImGui::BeginTabItem(name.c_str(), &isOpen, flags))
+            for (size_t i = 0; i < openContexts.size(); ++i)
             {
-                Context::SetContext(i);
-                ImGui::EndTabItem();
+                auto &ctx = openContexts[i];
+                auto name = ctx->loadedFile.empty() ? "Untitled" : fs::GetFilename(ctx->loadedFile);
+
+                bool isOpen = true;
+                ImGui::PushID(ctx.get());
+
+                int flags = (ctx->isDirty ? ImGuiTabItemFlags_UnsavedDocument : 0) | ImGuiTabItemFlags_NoTooltip;
+
+                if (ImGui::BeginTabItem(name.c_str(), &isOpen, flags))
+                {
+                    Context::SetContext(i);
+                    ImGui::EndTabItem();
+                }
+
+                if (!isOpen)
+                {
+                    if (Context::GetContext().isDirty)
+                    {
+                        m_PopupManager.OpenPopup<Popups::Prompt>(
+                            "dirty_buffer_prompt",
+                            "This palette has unsaved changes.\nDo you want to close?",
+                            [i](void)
+                            {
+                                Context::RemoveContext(i);
+                            }
+                        );
+                    }
+                    else
+                    {
+                        Context::RemoveContext(i);
+                    }
+                }
+
+                ImGui::PopID();
             }
 
-            if (!isOpen)
-            {
-                if (Context::GetContext().isDirty)
-                {
-                    m_PopupManager.OpenPopup<Popups::Prompt>(
-                        "dirty_buffer_prompt",
-                        "This palette has unsaved changes.\nDo you want to close?",
-                        [i](void)
-                        {
-                            Context::RemoveContext(i);
-                        }
-                    );
-                }
-                else
-                {
-                    Context::RemoveContext(i);
-                }
-            }
-        }
-
-        ImGui::Spacing();
-
-        if (!Context::HasNoContext())
-        {
-            this->DetailsBar();
             ImGui::Spacing();
-            this->PaletteEditor();
-        }
 
-        ImGui::EndTabBar();
+            if (!Context::HasNoContext())
+            {
+                this->DetailsBar();
+                ImGui::Spacing();
+                this->PaletteEditor();
+            }
+
+            ImGui::EndTabBar();
+        }
     }
     else
     {
@@ -347,7 +351,7 @@ void Editor::MenuBar(void)
         if (ImGui::BeginMenu("Others"))
         {
             if (ImGui::MenuItem("Combine Palettes", sText_FileShortcuts[SHORT_COMBINE])) m_PopupManager.OpenPopup<Popups::Combine>();
-            if (ImGui::MenuItem("Split Palette", sText_FileShortcuts[SHORT_SPLIT], nullptr, !Context::GetOpenContexts().empty())) m_PopupManager.OpenPopup<Popups::Split>();
+            if (ImGui::MenuItem("Split Palette", sText_FileShortcuts[SHORT_SPLIT], nullptr, !Context::HasNoContext())) m_PopupManager.OpenPopup<Popups::Split>();
             ImGui::EndMenu();
         }
 
@@ -517,8 +521,9 @@ void Editor::ProcessShortcuts(int key, int mods)
         case GLFW_KEY_K:
             if (mods & GLFW_MOD_SHIFT)
                 m_PopupManager.OpenPopup<Popups::Combine>();
+            break;
         case GLFW_KEY_L:
-            if (mods & GLFW_MOD_SHIFT)
+            if (mods & GLFW_MOD_SHIFT && !Context::HasNoContext())
                 m_PopupManager.OpenPopup<Popups::Split>();
             break;
         }

@@ -10,8 +10,9 @@
 namespace Popups
 {
     Combine::Combine() :
-        Popup("combine", true, true, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration),
-        m_Palette(0), m_Files{}
+        Popup("CombinePalettes", true, true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration), 
+        m_Palette(0),
+        m_Files{}
     {
     }
 
@@ -178,6 +179,7 @@ namespace Popups
                 m_Files.erase(m_Files.begin() + i);
                 CombineFiles();
             }
+            ImGui::PopID();
         }
         ImGui::EndChild();
     }

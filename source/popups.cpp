@@ -54,11 +54,10 @@ void PopupManager::DrawAllPopups()
 
         if (canDraw)
         {
-            popup->Draw();
-
             if (popup->GetCloseFlag())
                 ImGui::CloseCurrentPopup();
 
+            popup->Draw();
             ImGui::EndPopup();
         }
     }
