@@ -22,17 +22,17 @@ void PopupManager::UpdatePopupStates()
     m_PopupsToOpen.remove_if([](const auto &name) {
         if (ImGui::IsPopupOpen(name.c_str()))
             return true;
-        else
+        else if (!ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup))
             ImGui::OpenPopup(name.c_str());
 
         return false;
     });
 
-    m_OpenedPopups.remove_if([](const auto &popup) {
+    m_OpenedPopups.remove_if([this](const auto &popup) {
         if (ImGui::IsPopupOpen(popup->GetName().c_str()))
             return false;
 
-        return true;
+        return false;
     });
 }
 
