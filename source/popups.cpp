@@ -14,8 +14,7 @@ bool PopupManager::IsAnyPopupOpen()
 
 void PopupManager::ProcessShortcuts(int key, int mods)
 {
-    for (auto &popup : m_OpenedPopups)
-        popup->ProcessShortcuts(key, mods);
+    m_OpenedPopups.front()->ProcessShortcuts(key, mods);
 }
 
 void PopupManager::UpdatePopupStates()
