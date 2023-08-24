@@ -3,3 +3,4 @@ build/
 imgui.ini
 palette-editor
 .D[Ss]_[Ss]tore
+CMakeSettings.json
